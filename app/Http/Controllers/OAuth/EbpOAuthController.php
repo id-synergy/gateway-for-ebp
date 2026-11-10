@@ -4,6 +4,7 @@ namespace App\Http\Controllers\OAuth;
 
 use App\Http\Controllers\Controller;
 use App\Models\EbpAccount;
+use App\Services\Accounts\AccountEventLogger;
 use App\Services\Ebp\EbpFolderDiscovery;
 use App\Services\Ebp\EbpTokenService;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,7 @@ class EbpOAuthController extends Controller
     public function __construct(
         protected EbpTokenService $tokens,
         protected EbpFolderDiscovery $folders,
+        protected AccountEventLogger $events,
     ) {}
 
     /** GET /oauth/ebp/connect?account={id} */
@@ -57,6 +59,8 @@ class EbpOAuthController extends Controller
                 ? 'Autorisation refusée sur le portail EBP.'
                 : "Erreur du portail EBP : {$error}.";
 
+            $this->events->denied($account, $error);
+
             return redirect('/admin/comptes')->with('error', $message);
         }
 
@@ -64,11 +68,16 @@ class EbpOAuthController extends Controller
             return redirect('/admin/comptes')->with('error', "Code d'autorisation manquant.");
         }
 
+        // Reconnexion = le compte possédait déjà un token avant cet échange.
+        $reconnection = $account->token()->exists();
+
         try {
             $this->tokens->exchangeCode($account, $code);
+            $this->events->connected($account, $reconnection);
             $this->folders->sync($account);
         } catch (\Throwable $e) {
             Log::error('Connexion EBP échouée', ['account' => $account->id, 'message' => $e->getMessage()]);
+            $this->events->refreshFailed($account, $e->getMessage());
 
             return redirect('/admin/comptes')->with('error', 'Connexion EBP échouée : '.$e->getMessage());
         }

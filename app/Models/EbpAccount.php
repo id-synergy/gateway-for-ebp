@@ -69,6 +69,13 @@ class EbpAccount extends Model
         return $this->hasMany(EbpFolder::class);
     }
 
+    public function events(): HasMany
+    {
+        // Tri secondaire par id : ordre stable quand plusieurs événements partagent occurred_at
+        // (indispensable pour la pagination par curseur du journal d'activité).
+        return $this->hasMany(AccountEvent::class)->orderByDesc('occurred_at')->orderByDesc('id');
+    }
+
     public function appTokens(): HasMany
     {
         return $this->hasMany(AppToken::class);

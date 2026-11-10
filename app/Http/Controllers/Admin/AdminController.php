@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccountEvent;
 use App\Models\AlertLog;
 use App\Models\AllowedIp;
 use App\Models\AppToken;
@@ -12,6 +13,7 @@ use App\Models\NotificationPreference;
 use App\Models\RequestLog;
 use App\Models\User;
 use App\Services\Ebp\QuotaRegulator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -140,7 +142,50 @@ class AdminController extends Controller
                 'lastUsed' => optional($t->last_used_at)->diffForHumans() ?? 'jamais',
             ]),
             'callCount' => RequestLog::where('ebp_account_id', $account->id)->count(),
+            'events' => $this->eventsPage($account),
         ]);
+    }
+
+    /** Taille d'une page du journal d'activité (scroll infini). */
+    private const EVENTS_PER_PAGE = 20;
+
+    /**
+     * Page du journal d'activité d'un compte, pour le chargement initial et le scroll infini.
+     * Pagination par curseur : `before` = id du plus ancien événement déjà affiché.
+     */
+    private function eventsPage(EbpAccount $account, ?int $before = null): array
+    {
+        $query = $account->events()->getQuery(); // déjà trié par occurred_at desc
+
+        if ($before !== null) {
+            $query->where('id', '<', $before);
+        }
+
+        $rows = $query->limit(self::EVENTS_PER_PAGE + 1)->get();
+        $hasMore = $rows->count() > self::EVENTS_PER_PAGE;
+        $rows = $rows->take(self::EVENTS_PER_PAGE);
+
+        return [
+            'items' => $rows->map(fn (AccountEvent $e) => [
+                'id' => $e->id,
+                'type' => $e->type,
+                'level' => $e->level,
+                'message' => $e->message,
+                'context' => $e->context,
+                'at' => $e->occurred_at->format('d/m/Y H:i:s'),
+                'ago' => $e->occurred_at->diffForHumans(),
+            ])->values(),
+            'hasMore' => $hasMore,
+            'nextCursor' => $hasMore ? $rows->last()?->id : null,
+        ];
+    }
+
+    /** GET /admin/comptes/{account}/events?before=... — JSON pour le scroll infini et l'actualisation. */
+    public function accountEvents(Request $request, EbpAccount $account): JsonResponse
+    {
+        $before = $request->integer('before') ?: null;
+
+        return response()->json($this->eventsPage($account, $before));
     }
 
     public function jetons(): Response

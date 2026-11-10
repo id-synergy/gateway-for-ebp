@@ -4,6 +4,7 @@ namespace App\Services\Ebp;
 
 use App\Models\EbpAccount;
 use App\Models\EbpFolder;
+use App\Services\Accounts\AccountEventLogger;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -15,6 +16,7 @@ class EbpFolderDiscovery
     public function __construct(
         protected EbpTokenService $tokens,
         protected QuotaRegulator $quota,
+        protected AccountEventLogger $events,
     ) {}
 
     /**
@@ -57,6 +59,8 @@ class EbpFolderDiscovery
                 ],
             );
         }
+
+        $this->events->foldersSynced($account, count($folders));
 
         return count($folders);
     }

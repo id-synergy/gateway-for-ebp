@@ -5,6 +5,7 @@ namespace App\Services\Ebp;
 use App\Exceptions\Ebp\EbpAuthException;
 use App\Models\EbpAccount;
 use App\Models\EbpToken;
+use App\Services\Accounts\AccountEventLogger;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -22,6 +23,8 @@ class EbpTokenService
     /** Durées de repli si EBP n'envoie pas expires_in / refresh_expires_in (doc : 1 h / 30 j). */
     private const ACCESS_TTL_FALLBACK = 3600;
     private const REFRESH_TTL_FALLBACK = 30 * 24 * 3600;
+
+    public function __construct(private AccountEventLogger $events) {}
 
     /**
      * Construit l'URL d'autorisation EBP pour démarrer la connexion d'un compte.
@@ -93,6 +96,7 @@ class EbpTokenService
         if ($account->usesFakeEbp()) {
             $token = $this->storeTokenResponse($account, FakeEbpData::tokenResponse());
             $account->update(['status' => 'connected']);
+            $this->events->tokenRefreshed($account);
 
             return $token;
         }
@@ -110,6 +114,7 @@ class EbpTokenService
                 'last_refresh_error' => $response->status().' '.$response->body(),
             ]);
             $account->update(['status' => 'error']);
+            $this->events->refreshFailed($account, $response->status().' '.$response->body());
 
             throw new EbpAuthException($response->status(), 'Renouvellement du token OAuth EBP échoué. Reconnectez le compte dans le back-office.');
         }
@@ -117,6 +122,7 @@ class EbpTokenService
         $token = $this->storeTokenResponse($account, $response->json());
 
         $account->update(['status' => 'connected']);
+        $this->events->tokenRefreshed($account);
 
         return $token;
     }

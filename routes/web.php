@@ -40,6 +40,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::get('/comptes', [AdminController::class, 'comptes'])->name('admin.comptes.index');
     Route::post('/comptes', [AdminActionController::class, 'storeAccount'])->name('admin.comptes.store');
     Route::get('/comptes/{account}', [AdminController::class, 'compte'])->name('admin.comptes.show');
+    Route::get('/comptes/{account}/events', [AdminController::class, 'accountEvents'])->name('admin.comptes.events');
     Route::patch('/comptes/{account}', [AdminActionController::class, 'updateAccount'])->name('admin.comptes.update');
     Route::delete('/comptes/{account}', [AdminActionController::class, 'destroyAccount'])->name('admin.comptes.destroy');
     Route::post('/comptes/{account}/sync-folders', [AdminActionController::class, 'syncFolders'])->name('admin.comptes.sync-folders');

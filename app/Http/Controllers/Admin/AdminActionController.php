@@ -9,6 +9,7 @@ use App\Models\EbpAccount;
 use App\Models\EbpFolder;
 use App\Models\NotificationPreference;
 use App\Models\User;
+use App\Services\Accounts\AccountEventLogger;
 use App\Services\Apps\AppTokenService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,10 @@ use Illuminate\Validation\Rules\Password;
  */
 class AdminActionController extends Controller
 {
-    public function __construct(protected AppTokenService $tokens) {}
+    public function __construct(
+        protected AppTokenService $tokens,
+        protected AccountEventLogger $events,
+    ) {}
 
     public function storeToken(Request $request): RedirectResponse
     {
@@ -31,9 +35,10 @@ class AdminActionController extends Controller
         ]);
 
         $account = EbpAccount::findOrFail($data['ebp_account_id']);
-        $folder = $data['default_folder_id'] ? EbpFolder::find($data['default_folder_id']) : null;
+        $folder = ! empty($data['default_folder_id']) ? EbpFolder::find($data['default_folder_id']) : null;
 
         [, $plain] = $this->tokens->create($data['name'], $account, $folder);
+        $this->events->tokenCreated($account, $data['name']);
 
         // Le jeton en clair n'est montré qu'une fois, via le flash.
         return back()->with('newToken', $plain);
@@ -42,6 +47,7 @@ class AdminActionController extends Controller
     public function revokeToken(AppToken $token): RedirectResponse
     {
         $this->tokens->revoke($token);
+        $this->events->tokenRevoked($token->account, $token->name);
 
         return back()->with('success', 'Jeton révoqué.');
     }
@@ -54,6 +60,7 @@ class AdminActionController extends Controller
         }
 
         $plain = $this->tokens->regenerate($token);
+        $this->events->tokenRegenerated($token->account, $token->name);
 
         // Le nouveau jeton en clair n'est montré qu'une fois, via le flash.
         return back()->with('newToken', $plain);

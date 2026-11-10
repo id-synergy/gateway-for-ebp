@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Plug, FolderOpen, KeyRound, Activity, ArrowLeft, AlertTriangle, Settings, Trash2, RefreshCw,
+    Plug2, PlugZap, Ban, FolderSync, ShieldAlert, CheckCircle2, Clock,
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -16,7 +17,72 @@ const props = defineProps({
     folders: { type: Array, default: () => [] },
     tokens: { type: Array, default: () => [] },
     callCount: { type: Number, default: 0 },
+    events: { type: Object, default: () => ({ items: [], hasMore: false, nextCursor: null }) },
 });
+
+// --- Journal d'activité : timeline avec scroll infini + actualisation ---
+const log = ref([...props.events.items]);
+const cursor = ref(props.events.nextCursor);
+const hasMore = ref(props.events.hasMore);
+const loadingMore = ref(false);
+const refreshing = ref(false);
+const sentinel = ref(null);
+let observer = null;
+
+// Icône et couleurs par type/niveau d'événement.
+const eventIcon = {
+    connected: Plug2, reconnected: PlugZap, token_refreshed: RefreshCw, refresh_failed: ShieldAlert,
+    denied: Ban, folders_synced: FolderSync,
+    app_token_created: KeyRound, app_token_revoked: KeyRound, app_token_regenerated: KeyRound,
+};
+const levelStyle = {
+    success: { dot: 'bg-[#1D9E75]', ring: 'bg-[#1D9E75]/12 text-[#0F6E56]' },
+    info: { dot: 'bg-[#0046FE]', ring: 'bg-[#0046FE]/12 text-[#0046FE]' },
+    warning: { dot: 'bg-[#FAC775]', ring: 'bg-[#FAC775]/30 text-[#633806]' },
+    error: { dot: 'bg-[#E24B4A]', ring: 'bg-[#E24B4A]/12 text-[#E24B4A]' },
+};
+function iconFor(type) { return eventIcon[type] || Activity; }
+function styleFor(level) { return levelStyle[level] || levelStyle.info; }
+
+async function fetchEvents(before = null) {
+    const url = `/admin/comptes/${props.account.id}/events${before ? `?before=${before}` : ''}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+    if (!res.ok) throw new Error('fetch events');
+    return res.json();
+}
+
+async function loadMore() {
+    if (loadingMore.value || !hasMore.value) return;
+    loadingMore.value = true;
+    try {
+        const page = await fetchEvents(cursor.value);
+        log.value.push(...page.items);
+        cursor.value = page.nextCursor;
+        hasMore.value = page.hasMore;
+    } catch { /* silencieux : le journal est secondaire */ }
+    finally { loadingMore.value = false; }
+}
+
+async function refreshLog() {
+    if (refreshing.value) return;
+    refreshing.value = true;
+    try {
+        const page = await fetchEvents(null);
+        log.value = page.items;
+        cursor.value = page.nextCursor;
+        hasMore.value = page.hasMore;
+    } catch { /* silencieux */ }
+    finally { refreshing.value = false; }
+}
+
+onMounted(() => {
+    // Scroll infini : charge la page suivante dès que la sentinelle entre dans le viewport.
+    observer = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+    }, { rootMargin: '200px' });
+    if (sentinel.value) observer.observe(sentinel.value);
+});
+onBeforeUnmount(() => observer?.disconnect());
 
 const stateBadge = {
     healthy: { text: 'Sain', variant: 'default' },
@@ -228,5 +294,54 @@ function clearCache() {
                 </div>
             </CutCard>
         </div>
+
+        <!-- Journal d'activité (timeline) -->
+        <CutCard class="mt-4">
+            <div class="p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2">
+                        <Clock class="size-4" /> Journal d'activité
+                    </h3>
+                    <Button variant="outline" size="sm" :disabled="refreshing" @click="refreshLog">
+                        <RefreshCw class="size-3.5" :class="{ 'animate-spin': refreshing }" /> Actualiser
+                    </Button>
+                </div>
+
+                <p v-if="!log.length" class="text-sm text-muted-foreground">
+                    Aucun événement pour l'instant. Les connexions, renouvellements de token, refus,
+                    synchronisations de dossiers et actions sur les jetons apparaîtront ici.
+                </p>
+
+                <ol v-else class="relative border-s border-[#E4DFCE] ms-3 space-y-5">
+                    <li v-for="e in log" :key="e.id" class="ms-6">
+                        <!-- Pastille sur la ligne de temps -->
+                        <span class="absolute -start-[7px] mt-1.5 size-3.5 rounded-full border-2 border-white" :class="styleFor(e.level).dot"></span>
+                        <div class="flex items-start gap-3">
+                            <span class="size-8 rounded-full grid place-items-center shrink-0" :class="styleFor(e.level).ring">
+                                <component :is="iconFor(e.type)" class="size-4" />
+                            </span>
+                            <div class="min-w-0">
+                                <div class="text-sm text-[#002C52]">{{ e.message }}</div>
+                                <div class="text-xs text-muted-foreground mt-0.5">
+                                    {{ e.at }} · {{ e.ago }}
+                                </div>
+                                <div v-if="e.context && e.context.error"
+                                     class="text-xs text-destructive font-mono break-all mt-1 bg-destructive/5 rounded-lg px-2 py-1">
+                                    {{ e.context.error }}
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ol>
+
+                <!-- Sentinelle du scroll infini + indicateur -->
+                <div v-if="log.length" ref="sentinel" class="pt-4 text-center text-xs text-muted-foreground">
+                    <span v-if="loadingMore" class="inline-flex items-center gap-1.5">
+                        <RefreshCw class="size-3.5 animate-spin" /> Chargement…
+                    </span>
+                    <span v-else-if="!hasMore">Début du journal.</span>
+                </div>
+            </div>
+        </CutCard>
     </AdminLayout>
 </template>
