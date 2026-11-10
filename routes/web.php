@@ -44,6 +44,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::patch('/comptes/{account}', [AdminActionController::class, 'updateAccount'])->name('admin.comptes.update');
     Route::delete('/comptes/{account}', [AdminActionController::class, 'destroyAccount'])->name('admin.comptes.destroy');
     Route::post('/comptes/{account}/sync-folders', [AdminActionController::class, 'syncFolders'])->name('admin.comptes.sync-folders');
+    Route::post('/comptes/{account}/manual-token', [\App\Http\Controllers\OAuth\EbpOAuthController::class, 'manualExchange'])->name('admin.comptes.manual-token');
     Route::get('/jetons', [AdminController::class, 'jetons']);
     Route::get('/admins', [AdminController::class, 'admins']);
     Route::get('/ip', [AdminController::class, 'ip']);

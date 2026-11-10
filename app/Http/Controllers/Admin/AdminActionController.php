@@ -173,6 +173,7 @@ class AdminActionController extends Controller
             'subscription_key_secondary' => 'nullable|string',
             'active_subscription_key' => 'required|in:primary,secondary',
             'environment' => 'required|in:production,preproduction,demo',
+            'custom_redirect_uri' => 'nullable|url|max:255',
             'cache_enabled' => 'nullable|boolean',
             'cache_ttl' => 'nullable|integer|min:0|max:86400',
         ]);
@@ -183,6 +184,10 @@ class AdminActionController extends Controller
             'active_subscription_key' => $data['active_subscription_key'],
             'environment' => $data['environment'],
         ];
+        // Redirect_uri personnalisé : mis à jour seulement s'il est transmis (vide = effacé).
+        if ($request->has('custom_redirect_uri')) {
+            $update['custom_redirect_uri'] = $data['custom_redirect_uri'] ?: null;
+        }
         // Réglages de cache : mis à jour seulement s'ils sont transmis par le formulaire.
         if ($request->has('cache_enabled')) {
             $update['cache_enabled'] = (bool) $data['cache_enabled'];

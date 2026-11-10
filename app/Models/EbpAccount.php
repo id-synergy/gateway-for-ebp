@@ -20,6 +20,7 @@ class EbpAccount extends Model
         'subscription_key_secondary',
         'active_subscription_key',
         'environment',
+        'custom_redirect_uri',
         'status',
         'is_active',
         'cache_enabled',
@@ -109,12 +110,19 @@ class EbpAccount extends Model
             : config('ebp.token_urls.default');
     }
 
-    /** URL de redirection OAuth : callback local en démo, URL whitelistée EBP sinon. */
+    /**
+     * URL de redirection OAuth.
+     *  - Démo / faux portail : notre propre callback (le flux boucle en local).
+     *  - Réel : redirect_uri personnalisé du compte s'il est défini (ex. localhost:3333
+     *    whitelisté chez EBP), sinon l'URL globale de config.
+     */
     public function redirectUri(): string
     {
-        return $this->usesFakeEbp()
-            ? url('/oauth/ebp/callback')
-            : config('ebp.redirect_uri');
+        if ($this->usesFakeEbp()) {
+            return url('/oauth/ebp/callback');
+        }
+
+        return $this->custom_redirect_uri ?: config('ebp.redirect_uri');
     }
 
     public function isDemo(): bool

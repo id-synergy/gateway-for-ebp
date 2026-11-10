@@ -133,6 +133,7 @@ class AdminController extends Controller
                 'lastError' => $account->token?->last_refresh_error,
                 'cacheEnabled' => $account->cacheEnabled(),
                 'cacheTtl' => $account->cache_ttl,
+                'customRedirectUri' => $account->custom_redirect_uri,
             ],
             'folders' => $account->folders->map(fn ($f) => [
                 'id' => $f->folder_id, 'short' => $f->short_name, 'label' => $f->label, 'active' => $f->is_active,

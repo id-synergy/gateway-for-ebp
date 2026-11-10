@@ -80,6 +80,83 @@ class EbpOAuthController extends Controller
             return redirect($return)->with('error', "Code d'autorisation manquant.");
         }
 
+        return $this->finishConnection($account, $code, $return);
+    }
+
+    /**
+     * POST /admin/comptes/{account}/manual-token
+     *
+     * Déblocage sans attendre la validation de domaine par EBP : l'admin a autorisé la
+     * connexion sur le portail EBP, qui a renvoyé le `code` dans l'URL du redirect_uri
+     * whitelisté (ex. localhost:3333) — même si rien n'y répond, l'URL est dans la barre
+     * d'adresse. L'admin colle ici cette URL complète (ou juste le code) ; on fait
+     * l'échange côté serveur avec le redirect_uri du compte.
+     */
+    public function manualExchange(Request $request, EbpAccount $account): RedirectResponse
+    {
+        $return = route('admin.comptes.show', $account);
+
+        $raw = trim((string) $request->input('callback'));
+        if ($raw === '') {
+            return redirect($return)->with('error', 'Collez le retour EBP (URL complète ou code).');
+        }
+
+        [$code, $state] = $this->parseCallbackInput($raw);
+
+        if ($code === '') {
+            return redirect($return)->with('error', "Impossible de trouver le code dans ce que vous avez collé.");
+        }
+
+        // Le portail a pu renvoyer une erreur dans l'URL collée (refus, etc.).
+        if ($code === null) {
+            return redirect($return)->with('error', 'Le retour EBP collé contient une erreur, pas de code.');
+        }
+
+        // Vérif anti-CSRF tolérante : si un state est en session (même navigateur que le
+        // connect), il doit correspondre ; sinon (code obtenu ailleurs) on tolère, car
+        // c'est l'admin qui agit volontairement.
+        $sessionState = $request->session()->pull('ebp_oauth_state');
+        if ($sessionState !== null && $state !== null && $state !== '' && $state !== $sessionState) {
+            return redirect($return)->with('error', 'Le state ne correspond pas à la session. Relancez « Reconnecter ».');
+        }
+        $request->session()->forget('ebp_oauth_account');
+
+        return $this->finishConnection($account, $code, $return);
+    }
+
+    /**
+     * Extrait [code, state] d'une saisie : URL complète de callback, fragment de query,
+     * ou code brut. Retourne code = null si l'entrée contient un paramètre error.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function parseCallbackInput(string $raw): array
+    {
+        // Pas d'URL ni de query : on considère que c'est le code brut.
+        if (! str_contains($raw, '?') && ! str_contains($raw, '=') && ! str_contains($raw, '://')) {
+            return [$raw, null];
+        }
+
+        // Récupère la chaîne de requête, que ce soit une URL complète ou juste "code=...&state=...".
+        $query = $raw;
+        if (($pos = strpos($raw, '?')) !== false) {
+            $query = substr($raw, $pos + 1);
+        }
+        parse_str($query, $params);
+
+        if (! empty($params['error'])) {
+            return [null, $params['state'] ?? null];
+        }
+
+        return [(string) ($params['code'] ?? ''), isset($params['state']) ? (string) $params['state'] : null];
+    }
+
+    /**
+     * Échange le code, journalise, synchronise les dossiers et redirige.
+     * Partagé entre le callback automatique et l'échange manuel.
+     */
+    private function finishConnection(EbpAccount $account, string $code, string $return): RedirectResponse
+    {
         // Reconnexion = le compte possédait déjà un token avant cet échange.
         $reconnection = $account->token()->exists();
 

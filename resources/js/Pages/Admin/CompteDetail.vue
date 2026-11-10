@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Plug, FolderOpen, KeyRound, Activity, ArrowLeft, AlertTriangle, Settings, Trash2, RefreshCw,
-    Plug2, PlugZap, Ban, FolderSync, ShieldAlert, CheckCircle2, Clock, Eraser,
+    Plug2, PlugZap, Ban, FolderSync, ShieldAlert, CheckCircle2, Clock, Eraser, ClipboardPaste,
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -95,6 +95,7 @@ const form = useForm({
     label: props.account.label,
     active_subscription_key: props.account.key === 'secondaire' ? 'secondary' : 'primary',
     environment: props.account.environment || 'production',
+    custom_redirect_uri: props.account.customRedirectUri ?? '',
     cache_enabled: props.account.cacheEnabled ?? true,
     cache_ttl: props.account.cacheTtl ?? null,
     client_id: '', client_secret: '',
@@ -103,6 +104,16 @@ const form = useForm({
 
 function save() {
     form.patch(`/admin/comptes/${props.account.id}`, { onSuccess: () => { showEdit.value = false; } });
+}
+
+// Déblocage manuel : coller le retour EBP (URL complète ou code) pour forcer l'échange.
+const showManual = ref(false);
+const manualForm = useForm({ callback: '' });
+function submitManual() {
+    manualForm.post(`/admin/comptes/${props.account.id}/manual-token`, {
+        preserveScroll: true,
+        onSuccess: () => { showManual.value = false; manualForm.reset(); },
+    });
 }
 function remove() {
     if (window.confirm(`Supprimer le compte « ${props.account.label} » ? Les jetons rattachés perdront leur accès.`)) {
@@ -155,8 +166,27 @@ function clearCache() {
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <Button size="sm" @click="connect">Reconnecter</Button>
+                    <Button variant="outline" size="sm" @click="showManual = !showManual"><ClipboardPaste class="size-3.5" /> Saisir le retour EBP</Button>
                     <Button variant="outline" size="sm" @click="showEdit = !showEdit"><Settings class="size-3.5" /> Modifier</Button>
                     <Button variant="outline" size="sm" class="text-destructive" @click="remove"><Trash2 class="size-3.5" /> Supprimer</Button>
+                </div>
+            </div>
+        </CutCard>
+
+        <!-- Déblocage manuel : coller le retour EBP (URL complète ou code) -->
+        <CutCard v-if="showManual" class="mb-4">
+            <div class="p-5 space-y-3">
+                <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2"><ClipboardPaste class="size-4" /> Saisir le retour EBP</h3>
+                <p class="text-xs text-muted-foreground -mt-1">
+                    Après avoir autorisé la connexion sur le portail EBP, collez ici l'URL complète de retour
+                    (la barre d'adresse, même si la page affiche une erreur) ou simplement le code.
+                    Utile quand le redirect_uri whitelisté (ex. <code>localhost:3333</code>) ne pointe pas sur la gateway.
+                </p>
+                <Input v-model="manualForm.callback" placeholder="http://localhost:3333/callback?code=…&state=…  ou  le code seul" />
+                <p v-if="manualForm.errors.callback" class="text-xs text-destructive">{{ manualForm.errors.callback }}</p>
+                <div class="flex items-center gap-2">
+                    <Button size="sm" :disabled="manualForm.processing || !manualForm.callback" @click="submitManual">Valider le token</Button>
+                    <Button variant="outline" size="sm" @click="showManual = false">Annuler</Button>
                 </div>
             </div>
         </CutCard>
@@ -186,6 +216,15 @@ function clearCache() {
                             <option value="preproduction">Préproduction</option>
                             <option value="demo">Démo (serveur simulé)</option>
                         </select>
+                    </div>
+                    <div class="space-y-2 sm:col-span-2">
+                        <Label>Redirect URI personnalisé (optionnel)</Label>
+                        <Input v-model="form.custom_redirect_uri" type="url" placeholder="Vide = callback par défaut de la gateway" />
+                        <p v-if="form.errors.custom_redirect_uri" class="text-xs text-destructive">{{ form.errors.custom_redirect_uri }}</p>
+                        <p class="text-xs text-muted-foreground">
+                            URL whitelistée chez EBP vers laquelle le portail renvoie le code (ex. <code>http://localhost:3333/…</code>).
+                            Envoyée à l'autorisation et à l'échange du code. Le renouvellement du token n'en dépend pas.
+                        </p>
                     </div>
                     <div class="space-y-2">
                         <Label>Cache des lectures</Label>
