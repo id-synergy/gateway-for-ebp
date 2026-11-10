@@ -1,6 +1,8 @@
 <x-mail::message>
 # Purge automatique des logs échouée
 
+@include('mail.partials.alert-banner', ['level' => 'danger', 'label' => 'Incident — maintenance des logs'])
+
 La tâche planifiée de purge des logs et résultats de jobs au-delà de la rétention a **échoué**.
 
 - **Étape :** {{ $stage }}

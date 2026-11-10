@@ -1,6 +1,8 @@
 <x-mail::message>
 # Renouvellement du token EBP échoué
 
+@include('mail.partials.alert-banner', ['level' => 'danger', 'label' => 'Incident — connexion EBP interrompue'])
+
 Le renouvellement automatique du jeton d'accès EBP a **échoué** pour un compte connecté à la gateway.
 
 - **Compte concerné :** {{ $accountLabel }}
