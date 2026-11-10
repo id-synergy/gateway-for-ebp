@@ -1,0 +1,67 @@
+<?php
+
+return [
+    'accepted' => 'Le champ :attribute doit être accepté.',
+    'active_url' => "Le champ :attribute n'est pas une URL valide.",
+    'after' => 'Le champ :attribute doit être une date postérieure au :date.',
+    'alpha' => 'Le champ :attribute doit contenir uniquement des lettres.',
+    'alpha_num' => 'Le champ :attribute doit contenir uniquement des lettres et des chiffres.',
+    'array' => 'Le champ :attribute doit être un tableau.',
+    'before' => 'Le champ :attribute doit être une date antérieure au :date.',
+    'between' => [
+        'numeric' => 'Le champ :attribute doit être compris entre :min et :max.',
+        'string' => 'Le champ :attribute doit contenir entre :min et :max caractères.',
+        'array' => 'Le champ :attribute doit contenir entre :min et :max éléments.',
+    ],
+    'boolean' => 'Le champ :attribute doit être vrai ou faux.',
+    'confirmed' => 'La confirmation du champ :attribute ne correspond pas.',
+    'current_password' => 'Le mot de passe est incorrect.',
+    'date' => "Le champ :attribute n'est pas une date valide.",
+    'different' => 'Les champs :attribute et :other doivent être différents.',
+    'digits' => 'Le champ :attribute doit contenir :digits chiffres.',
+    'email' => 'Le champ :attribute doit être une adresse e-mail valide.',
+    'exists' => "Le champ :attribute sélectionné est invalide.",
+    'in' => "Le champ :attribute sélectionné est invalide.",
+    'integer' => 'Le champ :attribute doit être un entier.',
+    'ip' => 'Le champ :attribute doit être une adresse IP valide.',
+    'ipv4' => 'Le champ :attribute doit être une adresse IPv4 valide.',
+    'ipv6' => 'Le champ :attribute doit être une adresse IPv6 valide.',
+    'max' => [
+        'numeric' => 'Le champ :attribute ne peut pas être supérieur à :max.',
+        'string' => 'Le champ :attribute ne peut pas contenir plus de :max caractères.',
+        'array' => 'Le champ :attribute ne peut pas contenir plus de :max éléments.',
+    ],
+    'min' => [
+        'numeric' => 'Le champ :attribute doit être au moins :min.',
+        'string' => 'Le champ :attribute doit contenir au moins :min caractères.',
+        'array' => 'Le champ :attribute doit contenir au moins :min éléments.',
+    ],
+    'numeric' => 'Le champ :attribute doit être un nombre.',
+    'required' => 'Le champ :attribute est obligatoire.',
+    'required_if' => 'Le champ :attribute est obligatoire quand :other vaut :value.',
+    'same' => 'Les champs :attribute et :other doivent correspondre.',
+    'string' => 'Le champ :attribute doit être une chaîne de caractères.',
+    'unique' => 'La valeur du champ :attribute est déjà utilisée.',
+    'url' => "Le champ :attribute n'est pas une URL valide.",
+
+    /*
+    | Noms lisibles des champs (remplacent le nom technique dans les messages).
+    */
+    'attributes' => [
+        'label' => 'libellé',
+        'client_id' => 'ClientId',
+        'client_secret' => 'ClientSecret',
+        'subscription_key_primary' => "clé d'abonnement primaire",
+        'subscription_key_secondary' => 'clé secondaire',
+        'active_subscription_key' => "clé d'abonnement active",
+        'name' => "nom de l'application",
+        'email' => 'adresse e-mail',
+        'password' => 'mot de passe',
+        'ip' => 'adresse IP',
+        'ebp_account_id' => 'compte EBP',
+        'default_folder_id' => 'dossier par défaut',
+        'alert_type' => "type d'alerte",
+        'enabled' => 'activation',
+        'code' => 'code',
+    ],
+];

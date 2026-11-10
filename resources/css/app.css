@@ -1,0 +1,180 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../js/**/*.vue';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+    --radius: 0.625rem;
+    /* Fond crème chaleureux (#F6F2E4), texte marine (#002C52). */
+    --background: oklch(0.955 0.018 92);
+    --foreground: oklch(0.255 0.055 250);
+    /* Cartes blanches pour trancher sur le crème. */
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.255 0.055 250);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.255 0.055 250);
+    /* Primary = bleu électrique #0046FE. */
+    --primary: oklch(0.52 0.26 264);
+    --primary-foreground: oklch(0.99 0 0);
+    /* Secondary = crème un peu plus soutenu. */
+    --secondary: oklch(0.915 0.025 92);
+    --secondary-foreground: oklch(0.255 0.055 250);
+    --muted: oklch(0.915 0.025 92);
+    --muted-foreground: oklch(0.48 0.03 250);
+    /* Accent = bleu électrique. */
+    --accent: oklch(0.52 0.26 264);
+    --accent-foreground: oklch(0.99 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.984 0.003 247.858);
+    /* Bordures teintées crème. */
+    --border: oklch(0.88 0.022 92);
+    --input: oklch(0.88 0.022 92);
+    --ring: oklch(0.52 0.26 264);
+    /* Sidebar marine #002C52. */
+    --sidebar: oklch(0.255 0.055 250);
+    --sidebar-foreground: oklch(0.85 0.03 245);
+    --sidebar-primary: oklch(0.52 0.26 264);
+    --sidebar-primary-foreground: oklch(0.99 0 0);
+    --sidebar-accent: oklch(0.32 0.05 250);
+    --sidebar-accent-foreground: oklch(0.99 0 0);
+    --sidebar-border: oklch(0.35 0.05 250);
+    --sidebar-ring: oklch(0.52 0.26 264);
+}
+
+.dark {
+    /* Mode sombre marine profond. */
+    --background: oklch(0.19 0.045 250);
+    --foreground: oklch(0.95 0.01 245);
+    --card: oklch(0.25 0.05 250);
+    --card-foreground: oklch(0.95 0.01 245);
+    --popover: oklch(0.25 0.05 250);
+    --popover-foreground: oklch(0.95 0.01 245);
+    --primary: oklch(0.62 0.24 264);
+    --primary-foreground: oklch(0.14 0.03 250);
+    --secondary: oklch(0.3 0.05 250);
+    --secondary-foreground: oklch(0.95 0.01 245);
+    --muted: oklch(0.3 0.05 250);
+    --muted-foreground: oklch(0.72 0.03 245);
+    --accent: oklch(0.62 0.24 264);
+    --accent-foreground: oklch(0.14 0.03 250);
+    --destructive: oklch(0.704 0.191 22.216);
+    --destructive-foreground: oklch(0.984 0.003 247.858);
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.62 0.24 264);
+    --sidebar: oklch(0.15 0.04 250);
+    --sidebar-foreground: oklch(0.85 0.03 245);
+    --sidebar-primary: oklch(0.62 0.24 264);
+    --sidebar-primary-foreground: oklch(0.99 0 0);
+    --sidebar-accent: oklch(0.3 0.05 250);
+    --sidebar-accent-foreground: oklch(0.99 0 0);
+    --sidebar-border: oklch(1 0 0 / 12%);
+    --sidebar-ring: oklch(0.62 0.24 264);
+}
+
+@theme inline {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+    * {
+        border-color: var(--border);
+    }
+    body {
+        background-color: var(--background);
+        color: var(--foreground);
+    }
+}
+
+/* Coin coupé (signature EBP) : un coin franc et plus marqué, les autres bien arrondis. */
+.cut-tl { border-top-left-radius: 0 !important; border-bottom-right-radius: 1.25rem; }
+.cut-tr { border-top-right-radius: 0 !important; border-bottom-left-radius: 1.25rem; }
+
+/* Pastille triangulaire GRANDE dans le coin coupé. */
+.corner-badge {
+    position: absolute;
+    width: 66px;
+    height: 66px;
+    display: grid;
+    color: #fff;
+    font-size: 20px;
+}
+.corner-badge.tl { top: 0; left: 0; clip-path: polygon(0 0, 100% 0, 0 100%); padding: 8px 0 0 9px; place-items: start; }
+.corner-badge.tr { top: 0; right: 0; clip-path: polygon(100% 0, 100% 100%, 0 0); padding: 8px 9px 0 0; place-items: start end; }
+
+/* Cases à cocher au style de la charte : carré arrondi, coché = bleu électrique + coche blanche. */
+.gw-check {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 1.5px solid var(--border);
+    border-radius: 0.4rem;
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+    transition: background .15s, border-color .15s;
+    flex-shrink: 0;
+}
+.gw-check:hover { border-color: #0046FE; }
+.gw-check:checked {
+    background: #0046FE;
+    border-color: #0046FE;
+}
+.gw-check:checked::after {
+    content: "";
+    position: absolute;
+    left: 0.33rem;
+    top: 0.14rem;
+    width: 0.3rem;
+    height: 0.58rem;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+.gw-check:focus-visible { outline: 2px solid #0046FE; outline-offset: 2px; }
+
+/* Selects : chevron propre, bien aligné (remplace la flèche native mal placée). */
+.gw-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23002C52' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    padding-right: 2.25rem;
+}

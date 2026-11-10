@@ -1,0 +1,294 @@
+openapi: 3.0.3
+info:
+  title: Gateway API EBP
+  description: >
+    Passerelle d'accès à l'API EBP SaaS Gestion. Les applications s'authentifient
+    par un jeton d'app (Bearer gw_...) ; le compte EBP et le dossier sont résolus
+    par la gateway.
+
+
+    PROXY TRANSPARENT : toute requête (tout verbe, lecture ET écriture) dont le chemin
+    commence par un préfixe EBP autorisé est relayée telle quelle vers EBP. Les chemins
+    ci-dessous ne sont que des EXEMPLES — tout endpoint EBP sous un préfixe autorisé
+    fonctionne. FolderId implicite (résolu par le jeton, ou passé en ?folderId=).
+
+
+    Lectures mises en cache (contournable par ?noCache=1 ou Cache-Control: no-cache) ;
+    une écriture invalide le cache du dossier. Sous charge, une lecture bascule en job
+    (202 + jobId).
+  version: 0.1.0
+servers:
+  - url: /
+    description: Cette instance
+  - url: https://gateway.example.com
+    description: Production (à configurer au déploiement)
+security:
+  - appToken: []
+tags:
+  - name: Santé
+  - name: Lecture
+  - name: Écriture
+  - name: Jobs
+  - name: Composite
+paths:
+  /api/v1/ping:
+    get:
+      tags: [Santé]
+      summary: Vérifie que la gateway répond
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  service: { type: string }
+  # Miroir des endpoints EBP officiels (mêmes chemins que la doc EBP SaaS Gestion).
+  # Le FolderId est implicite : résolu par le jeton d'app, ou passé en ?folderId=.
+  # Réponses mises en cache côté gateway (allège le quota EBP) ; 'cached: true' si servi du cache.
+  /gescom/api/v1/Folders:
+    get:
+      tags: [Lecture]
+      summary: Dossiers du compte (endpoint EBP officiel)
+      parameters:
+        - { name: Offset, in: query, schema: { type: integer } }
+        - { name: Limit, in: query, schema: { type: integer, maximum: 100 } }
+      responses:
+        '200': { $ref: '#/components/responses/EbpList' }
+        '202': { $ref: '#/components/responses/JobAccepted' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /gescom/api/v1/Clients:
+    get:
+      tags: [Lecture]
+      summary: Clients du dossier (EBP Folders/{FolderId}/Clients)
+      parameters:
+        - { name: folderId, in: query, schema: { type: string }, description: Dossier ciblé (sinon défaut du jeton) }
+        - { name: SearchTerm, in: query, schema: { type: string } }
+        - { name: TypeClient, in: query, schema: { type: string } }
+        - { name: Offset, in: query, schema: { type: integer } }
+        - { name: Limit, in: query, schema: { type: integer, maximum: 100 } }
+      responses:
+        '200': { $ref: '#/components/responses/EbpList' }
+        '202': { $ref: '#/components/responses/JobAccepted' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /gescom/api/v1/Items/ItemsExtentedQuery:
+    get:
+      tags: [Lecture]
+      summary: Articles du dossier (EBP Items/ItemsExtentedQuery)
+      parameters:
+        - { name: folderId, in: query, schema: { type: string } }
+        - { name: SysModifiedDate, in: query, schema: { type: string } }
+        - { name: Offset, in: query, schema: { type: integer } }
+        - { name: Limit, in: query, schema: { type: integer, maximum: 100 } }
+      responses:
+        '200': { $ref: '#/components/responses/EbpList' }
+        '202': { $ref: '#/components/responses/JobAccepted' }
+  /gescom/api/v1/Items/ItemsExtentedQuery/WithTrackingStock:
+    get:
+      tags: [Lecture]
+      summary: Articles avec suivi de stock (endpoint EBP officiel)
+      parameters:
+        - { name: folderId, in: query, schema: { type: string } }
+        - { name: Offset, in: query, schema: { type: integer } }
+        - { name: Limit, in: query, schema: { type: integer, maximum: 100 } }
+      responses:
+        '200': { $ref: '#/components/responses/EbpList' }
+        '202': { $ref: '#/components/responses/JobAccepted' }
+  /gescom/api/v1/Documents/SaleDocument:
+    get:
+      tags: [Lecture]
+      summary: Documents de vente (EBP Documents/SaleDocument)
+      parameters:
+        - { name: folderId, in: query, schema: { type: string } }
+        - { name: noCache, in: query, schema: { type: boolean }, description: Contourne le cache de lecture }
+        - { name: Duration, in: query, schema: { type: integer, default: 365 }, description: Fenêtre en jours (obligatoire côté EBP) }
+        - { name: DocumentType, in: query, schema: { type: integer } }
+        - { name: ToDate, in: query, schema: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/EbpList' }
+        '202': { $ref: '#/components/responses/JobAccepted' }
+    post:
+      tags: [Écriture]
+      summary: Créer un document de vente (écriture relayée telle quelle vers EBP)
+      description: >
+        Exemple d'écriture. Le corps JSON est relayé tel quel à EBP ; la réponse EBP
+        est renvoyée. Une écriture invalide le cache de lecture du dossier concerné.
+      parameters:
+        - { name: folderId, in: query, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Document mis à jour (réponse EBP relayée) }
+        '201': { description: Document créé (réponse EBP relayée) }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /gescom/api/v1/Documents/PurchaseDocument:
+    get:
+      tags: [Lecture]
+      summary: Documents d'achat (EBP Documents/PurchaseDocument)
+      parameters:
+        - { name: folderId, in: query, schema: { type: string } }
+        - { name: Duration, in: query, schema: { type: integer, default: 365 } }
+      responses:
+        '200': { $ref: '#/components/responses/EbpList' }
+        '202': { $ref: '#/components/responses/JobAccepted' }
+  /api/v1/batch:
+    post:
+      tags: [Composite]
+      summary: Lot de requêtes de lecture (sous-jobs regroupés)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requests]
+              properties:
+                requests:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [key, endpoint]
+                    properties:
+                      key: { type: string }
+                      endpoint: { type: string }
+                      query: { type: object, additionalProperties: true }
+      responses:
+        '202': { $ref: '#/components/responses/JobAccepted' }
+  /api/v1/compose:
+    post:
+      tags: [Composite]
+      summary: Requête composite (liste puis sous-requête par élément, ex. CA par client)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [list, itemKey, perItem]
+              properties:
+                list:
+                  type: object
+                  required: [endpoint]
+                  properties:
+                    endpoint: { type: string }
+                    query: { type: object, additionalProperties: true }
+                itemKey: { type: string, description: Champ identifiant de chaque élément }
+                perItem:
+                  type: object
+                  required: [endpointTemplate]
+                  properties:
+                    endpointTemplate: { type: string, description: "Peut contenir {item}" }
+                    queryParam: { type: string, nullable: true }
+      responses:
+        '202': { $ref: '#/components/responses/JobAccepted' }
+        '422': { $ref: '#/components/responses/BadRequest' }
+  /api/v1/jobs/{jobId}:
+    get:
+      tags: [Jobs]
+      summary: Statut et progression d'un job
+      parameters:
+        - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Statut du job
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JobStatus' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/jobs/{jobId}/result:
+    get:
+      tags: [Jobs]
+      summary: Résultat d'un job terminé
+      parameters:
+        - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Résultat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId: { type: string }
+                  status: { type: string, enum: [done, partial, failed] }
+                  result: { type: object, additionalProperties: true }
+                  errors: { type: array, nullable: true, items: { type: object } }
+        '409': { description: Job non terminé }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    appToken:
+      type: http
+      scheme: bearer
+      description: Jeton d'app émis par la gateway (format gw_...).
+  schemas:
+    JobStatus:
+      type: object
+      properties:
+        jobId: { type: string, format: uuid }
+        type: { type: string, enum: [simple, compose, batch] }
+        status: { type: string, enum: [pending, running, done, partial, failed] }
+        progress:
+          type: object
+          properties:
+            done: { type: integer }
+            total: { type: integer }
+        pollIntervalHint: { type: integer, description: Intervalle de polling conseillé (secondes) }
+        finishedAt: { type: string, format: date-time, nullable: true }
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+  responses:
+    DataList:
+      description: Liste de données
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { type: array, items: { type: object, additionalProperties: true } }
+    EbpList:
+      description: Données EBP normalisées
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { type: array, items: { type: object, additionalProperties: true } }
+              paging: { type: object, nullable: true, additionalProperties: true }
+              folder: { type: string }
+    JobAccepted:
+      description: Requête basculée en job (polling)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              jobId: { type: string, format: uuid }
+              status: { type: string }
+              pollIntervalHint: { type: integer }
+    Unauthorized:
+      description: Jeton manquant, invalide ou révoqué
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    BadRequest:
+      description: Requête invalide (ex. aucun dossier ciblé)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
