@@ -191,6 +191,35 @@ paths:
       responses:
         '202': { $ref: '#/components/responses/JobAccepted' }
         '422': { $ref: '#/components/responses/BadRequest' }
+  /api/v1/jobs:
+    get:
+      tags: [Jobs]
+      summary: Liste des jobs du jeton (les plus récents d'abord)
+      description: >
+        Liste les jobs lancés par le jeton appelant. Filtre `status` : un statut précis,
+        ou `in_progress` (raccourci pending+running = jobs en cours). Paginé.
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [in_progress, pending, running, done, partial, failed] }, description: "Filtre d'état ; `in_progress` = pending + running" }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 100 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        '200':
+          description: Liste paginée des jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/JobStatus' }
+                  paging:
+                    type: object
+                    properties:
+                      offset: { type: integer }
+                      limit: { type: integer }
+                      total: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/v1/jobs/{jobId}:
     get:
       tags: [Jobs]

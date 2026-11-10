@@ -2,6 +2,7 @@
 
 namespace App\Services\Ebp;
 
+use App\Exceptions\Ebp\EbpAuthException;
 use App\Models\EbpAccount;
 use App\Models\EbpToken;
 use Illuminate\Support\Carbon;
@@ -85,7 +86,7 @@ class EbpTokenService
         $token = $account->token;
 
         if (! $token || ! $token->refresh_token) {
-            throw new RuntimeException("Aucun refresh token pour le compte #{$account->id}.");
+            throw new EbpAuthException(message: "Compte EBP non connecté (aucun refresh token). Reconnectez le compte dans le back-office.");
         }
 
         // Mode démo : renouvellement simulé, sans appel réseau.
@@ -110,7 +111,7 @@ class EbpTokenService
             ]);
             $account->update(['status' => 'error']);
 
-            throw new RuntimeException('Renouvellement du token OAuth EBP échoué : '.$response->status());
+            throw new EbpAuthException($response->status(), 'Renouvellement du token OAuth EBP échoué. Reconnectez le compte dans le back-office.');
         }
 
         $token = $this->storeTokenResponse($account, $response->json());
@@ -128,7 +129,7 @@ class EbpTokenService
         $token = $account->token;
 
         if (! $token) {
-            throw new RuntimeException("Compte EBP #{$account->id} non connecté.");
+            throw new EbpAuthException(message: 'Compte EBP non connecté. Reconnectez le compte dans le back-office.');
         }
 
         $expired = ! $token->access_token

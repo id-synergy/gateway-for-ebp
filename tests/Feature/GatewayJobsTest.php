@@ -129,4 +129,29 @@ class GatewayJobsTest extends TestCase
 
         $this->getJson("/api/v1/jobs/{$job->public_id}", $this->auth())->assertStatus(404);
     }
+
+    public function test_la_liste_des_jobs_ne_renvoie_que_ceux_du_jeton(): void
+    {
+        GatewayJob::create(['public_id' => Str::uuid(), 'type' => 'simple', 'app_token_id' => $this->token->id, 'status' => 'running']);
+        GatewayJob::create(['public_id' => Str::uuid(), 'type' => 'simple', 'app_token_id' => $this->token->id, 'status' => 'done', 'finished_at' => now()]);
+        // Job d'un autre jeton -> ne doit pas apparaître.
+        [$autre] = app(AppTokenService::class)->create('Autre', $this->account, $this->folder);
+        GatewayJob::create(['public_id' => Str::uuid(), 'type' => 'simple', 'app_token_id' => $autre->id, 'status' => 'running']);
+
+        $this->getJson('/api/v1/jobs', $this->auth())
+            ->assertOk()
+            ->assertJsonPath('paging.total', 2)
+            ->assertJsonCount(2, 'data');
+    }
+
+    public function test_la_liste_filtre_les_jobs_en_cours(): void
+    {
+        GatewayJob::create(['public_id' => Str::uuid(), 'type' => 'simple', 'app_token_id' => $this->token->id, 'status' => 'pending']);
+        GatewayJob::create(['public_id' => Str::uuid(), 'type' => 'simple', 'app_token_id' => $this->token->id, 'status' => 'running']);
+        GatewayJob::create(['public_id' => Str::uuid(), 'type' => 'simple', 'app_token_id' => $this->token->id, 'status' => 'done', 'finished_at' => now()]);
+
+        $this->getJson('/api/v1/jobs?status=in_progress', $this->auth())
+            ->assertOk()
+            ->assertJsonPath('paging.total', 2); // pending + running, pas le done
+    }
 }

@@ -234,6 +234,33 @@ class GatewayReadTest extends TestCase
             ->assertOk();
     }
 
+    public function test_une_erreur_ebp_est_relayee_en_502_propre(): void
+    {
+        // EBP répond 500 sur l'appel métier (token déjà valide via setUp).
+        Http::fake(['*/Folders/3691/Clients*' => Http::response('oops', 500)]);
+
+        $this->getJson('/gescom/api/v1/Clients', $this->auth())
+            ->assertStatus(502)
+            ->assertJsonPath('error', 'ebp_upstream_error')
+            ->assertJsonMissingPath('file')   // pas de fuite de structure interne
+            ->assertJsonMissingPath('trace');
+    }
+
+    public function test_un_compte_sans_token_renvoie_503_sans_trace(): void
+    {
+        // Compte sans token du tout : l'appel ne peut pas s'authentifier -> EbpAuthException -> 503.
+        $account = EbpAccount::factory()->create(['is_active' => true, 'status' => 'error']);
+        $folder = EbpFolder::factory()->create(['ebp_account_id' => $account->id, 'folder_id' => '7777']);
+        [, $plain] = app(AppTokenService::class)->create('SansToken', $account, $folder);
+        Http::preventStrayRequests(); // aucun appel EBP ne doit partir
+
+        $this->getJson('/gescom/api/v1/Clients', ['Authorization' => "Bearer {$plain}"])
+            ->assertStatus(503)
+            ->assertJsonPath('error', 'ebp_account_unauthenticated')
+            ->assertJsonMissingPath('file')
+            ->assertJsonMissingPath('trace');
+    }
+
     public function test_sans_jeton_401(): void
     {
         $this->getJson('/gescom/api/v1/Clients')->assertStatus(401);

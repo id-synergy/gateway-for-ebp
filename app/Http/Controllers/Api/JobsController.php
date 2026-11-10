@@ -14,6 +14,45 @@ use Illuminate\Http\Request;
  */
 class JobsController extends Controller
 {
+    /** Statuts considérés « en cours » (ni terminés, ni en échec). */
+    private const IN_PROGRESS = ['pending', 'running'];
+
+    /**
+     * Liste les jobs du jeton appelant (les plus récents d'abord).
+     *
+     * Filtres : ?status=pending|running|done|partial|failed, ou ?status=in_progress
+     * (raccourci pending+running = jobs en cours). Pagination : ?limit (défaut 50, max 100), ?offset.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        /** @var AppToken $token */
+        $token = $request->attributes->get('app_token');
+
+        $limit = min(100, max(1, (int) $request->query('limit', 50)));
+        $offset = max(0, (int) $request->query('offset', 0));
+
+        $query = GatewayJob::where('app_token_id', $token->id)->latest('id');
+
+        if ($status = $request->query('status')) {
+            $query->whereIn('status', $status === 'in_progress' ? self::IN_PROGRESS : [$status]);
+        }
+
+        $total = (clone $query)->count();
+        $jobs = $query->offset($offset)->limit($limit)->get();
+
+        return response()->json([
+            'data' => $jobs->map(fn (GatewayJob $job) => [
+                'jobId' => $job->public_id,
+                'type' => $job->type,
+                'status' => $job->status,
+                'progress' => ['done' => $job->progress_done, 'total' => $job->progress_total],
+                'createdAt' => optional($job->created_at)->toIso8601String(),
+                'finishedAt' => optional($job->finished_at)->toIso8601String(),
+            ]),
+            'paging' => ['offset' => $offset, 'limit' => $limit, 'total' => $total],
+        ]);
+    }
+
     public function status(Request $request, string $jobId): JsonResponse
     {
         $job = $this->findOwnedJob($request, $jobId);

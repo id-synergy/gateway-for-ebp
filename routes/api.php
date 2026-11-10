@@ -48,6 +48,7 @@ Route::prefix('v1')->middleware('throttle:gateway')->group(function () {
         });
 
         // Suivi des jobs (lectures basculées en asynchrone).
+        Route::get('/jobs', [JobsController::class, 'index']);
         Route::get('/jobs/{jobId}', [JobsController::class, 'status']);
         Route::get('/jobs/{jobId}/result', [JobsController::class, 'result']);
 
