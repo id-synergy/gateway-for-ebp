@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { router, useForm, usePage } from '@inertiajs/vue3';
+import QRCode from 'qrcode';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -17,11 +18,31 @@ import { Plus, Copy, Check, RefreshCw } from 'lucide-vue-next';
 const props = defineProps({
     tokens: { type: Array, default: () => [] },
     accounts: { type: Array, default: () => [] },
+    endpoint: { type: String, default: '' },
 });
 
 const page = usePage();
 const showForm = ref(false);
 const copied = ref(false);
+
+// QR code de connexion : généré localement (lib qrcode, aucun service tiers) dès qu'un
+// nouveau jeton en clair est affiché. Encode { endpoint, token } en JSON à scanner par l'app.
+const qrCanvas = ref(null);
+const showQr = ref(false);
+
+watch(
+    () => page.props.flash?.newToken,
+    (token) => {
+        if (! token) { showQr.value = false; return; }
+        showQr.value = true;
+        nextTick(() => {
+            if (! qrCanvas.value) return;
+            const payload = JSON.stringify({ endpoint: props.endpoint, token });
+            QRCode.toCanvas(qrCanvas.value, payload, { width: 220, margin: 1 }, () => {});
+        });
+    },
+    { immediate: true },
+);
 
 const form = useForm({ name: '', ebp_account_id: props.accounts[0]?.id ?? null, default_folder_id: null });
 
@@ -111,6 +132,18 @@ function regenerate(token) {
                     </Button>
                 </div>
                 <p v-if="copied" class="text-xs text-[#1D9E75] mt-1.5">Jeton copié dans le presse-papiers.</p>
+
+                <!-- QR code de connexion : à scanner depuis l'application -->
+                <div v-if="showQr" class="mt-4 flex items-start gap-4 flex-wrap">
+                    <div class="rounded-xl bg-white border border-[#E4DFCE] p-3">
+                        <canvas ref="qrCanvas" class="block"></canvas>
+                    </div>
+                    <div class="text-sm text-muted-foreground max-w-sm">
+                        <p class="font-medium text-[#002C52] mb-1">Connexion rapide par QR code</p>
+                        <p>Scannez ce code depuis l'application pour la connecter automatiquement : il contient l'adresse de la gateway et ce jeton.</p>
+                        <p class="text-xs mt-2">Comme le jeton, il n'est affiché qu'une fois.</p>
+                    </div>
+                </div>
             </div>
         </CutCard>
 

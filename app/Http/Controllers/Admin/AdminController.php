@@ -207,6 +207,8 @@ class AdminController extends Controller
                 'id' => $a->id, 'label' => $a->label,
                 'folders' => $a->folders->map(fn ($f) => ['id' => $f->id, 'label' => $f->label ?? $f->folder_id]),
             ]),
+            // Endpoint de base de la gateway, pour le QR code de connexion des apps.
+            'endpoint' => rtrim(url('/'), '/'),
         ]);
     }
 
