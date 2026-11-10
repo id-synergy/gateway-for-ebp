@@ -38,7 +38,7 @@ class EbpTokenService
             'response_mode' => 'query',
         ]);
 
-        $authorizeUrl = $account->isDemo()
+        $authorizeUrl = $account->usesFakeEbp()
             ? rtrim(url('/fake-ebp/connect/authorize'), '?')
             : config('ebp.authorize_url');
 
@@ -51,7 +51,7 @@ class EbpTokenService
     public function exchangeCode(EbpAccount $account, string $code): EbpToken
     {
         // Mode démo : tokens simulés, sans appel réseau (évite toute boucle HTTP vers le faux serveur).
-        if ($account->isDemo()) {
+        if ($account->usesFakeEbp()) {
             $token = $this->storeTokenResponse($account, FakeEbpData::tokenResponse());
             $account->update(['status' => 'connected']);
 
@@ -90,7 +90,7 @@ class EbpTokenService
         }
 
         // Mode démo : renouvellement simulé, sans appel réseau.
-        if ($account->isDemo()) {
+        if ($account->usesFakeEbp()) {
             $token = $this->storeTokenResponse($account, FakeEbpData::tokenResponse());
             $account->update(['status' => 'connected']);
 

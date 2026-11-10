@@ -98,7 +98,7 @@ class EbpClient
     protected function request(EbpAccount $account, string $method, string $endpoint, array $query, mixed $body): Response
     {
         // Mode démo : réponse simulée, sans appel réseau (ni quota consommé).
-        if ($account->isDemo()) {
+        if ($account->usesFakeEbp()) {
             return $this->demoResponse($method, $endpoint, $body);
         }
 

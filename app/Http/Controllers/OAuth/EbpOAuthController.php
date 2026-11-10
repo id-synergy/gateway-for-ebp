@@ -51,6 +51,15 @@ class EbpOAuthController extends Controller
         $accountId = $request->session()->pull('ebp_oauth_account');
         $account = EbpAccount::findOrFail($accountId);
 
+        // Le portail EBP renvoie error=... quand l'utilisateur refuse ou qu'une erreur survient.
+        if ($error = (string) $request->query('error')) {
+            $message = $error === 'access_denied'
+                ? 'Autorisation refusée sur le portail EBP.'
+                : "Erreur du portail EBP : {$error}.";
+
+            return redirect('/admin/comptes')->with('error', $message);
+        }
+
         if ($code === '') {
             return redirect('/admin/comptes')->with('error', "Code d'autorisation manquant.");
         }

@@ -24,7 +24,7 @@ class EbpFolderDiscovery
     public function sync(EbpAccount $account): int
     {
         // Mode démo : dossiers simulés, sans appel réseau (ni quota consommé).
-        if ($account->isDemo()) {
+        if ($account->usesFakeEbp()) {
             $folders = FakeEbpData::folders()['folders'];
         } else {
             $response = $this->quota->run(fn () => Http::withHeaders([

@@ -15,6 +15,15 @@ return [
     'api_base_url' => env('EBP_API_BASE_URL', 'https://api-developpeurs.ebp.com'),
     'scope' => 'openid profile offline_access',
 
+    // Faux portail EBP global (dev/test) : quand vrai, TOUT le flux OAuth et les appels
+    // API de TOUS les comptes sont routés vers le faux serveur EBP intégré (routes fake-ebp),
+    // quel que soit l'environnement du compte. Permet un environnement de test complet en local.
+    //
+    // GARDE-FOU : impossible en production — forcé à false si APP_ENV=production, même si
+    // la variable est à true. Ne jamais activer sur un serveur de production.
+    'fake_portal' => env('APP_ENV') !== 'production'
+        && filter_var(env('EBP_FAKE_PORTAL', false), FILTER_VALIDATE_BOOLEAN),
+
     // URLs de base de l'API EBP selon l'environnement ciblé par chaque compte.
     // 'demo' pointe sur le serveur EBP simulé interne (voir routes 'fake-ebp'), pour tester
     // tout le flux de la gateway sans identifiants EBP réels.

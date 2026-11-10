@@ -19,6 +19,9 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Le faux portail global ne doit jamais s'activer implicitement en test
+             (chaque test qui en a besoin le force via config()). -->
+        <env name="EBP_FAKE_PORTAL" value="false"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

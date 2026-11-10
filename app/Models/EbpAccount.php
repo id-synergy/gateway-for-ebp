@@ -85,7 +85,7 @@ class EbpAccount extends Model
     /** URL de base de l'API EBP selon l'environnement du compte (production / préproduction / démo). */
     public function apiBaseUrl(): string
     {
-        if ($this->environment === 'demo') {
+        if ($this->usesFakeEbp()) {
             return url('/fake-ebp');
         }
 
@@ -97,7 +97,7 @@ class EbpAccount extends Model
     /** URL du endpoint OAuth token : faux serveur en démo (URL courante), EBP sinon. */
     public function tokenUrl(): string
     {
-        return $this->environment === 'demo'
+        return $this->usesFakeEbp()
             ? url('/fake-ebp/connect/token')
             : config('ebp.token_urls.default');
     }
@@ -105,7 +105,7 @@ class EbpAccount extends Model
     /** URL de redirection OAuth : callback local en démo, URL whitelistée EBP sinon. */
     public function redirectUri(): string
     {
-        return $this->environment === 'demo'
+        return $this->usesFakeEbp()
             ? url('/oauth/ebp/callback')
             : config('ebp.redirect_uri');
     }
@@ -113,5 +113,16 @@ class EbpAccount extends Model
     public function isDemo(): bool
     {
         return $this->environment === 'demo';
+    }
+
+    /**
+     * Ce compte passe-t-il par le faux serveur EBP (routes fake-ebp) ?
+     *
+     * Vrai si le compte est en environnement « demo », OU si le faux portail global
+     * est activé (config ebp.fake_portal — dev/test uniquement, jamais en production).
+     */
+    public function usesFakeEbp(): bool
+    {
+        return $this->isDemo() || (bool) config('ebp.fake_portal');
     }
 }

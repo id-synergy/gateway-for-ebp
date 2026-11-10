@@ -21,6 +21,7 @@ Route::get('/', fn () => redirect('/admin'));
 if (! app()->environment('production')) {
     Route::prefix('fake-ebp')->group(function () {
         Route::get('/connect/authorize', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'authorize']);
+        Route::post('/connect/authorize', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'authorizeSubmit']);
         Route::post('/connect/token', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'token']);
         Route::get('/gescom/api/v1/Folders', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'folders']);
         Route::get('/gescom/api/v1/Folders/{folder}/Clients', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'clients']);
