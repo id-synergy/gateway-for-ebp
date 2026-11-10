@@ -105,6 +105,24 @@ class ManualTokenExchangeTest extends TestCase
         $this->assertDatabaseCount('ebp_tokens', 0);
     }
 
+    public function test_un_code_expire_donne_un_message_explicite(): void
+    {
+        // EBP renvoie invalid_grant quand le code est expiré ou déjà utilisé.
+        Http::fake([config('ebp.token_url') => Http::response(['error' => 'invalid_grant'], 400)]);
+
+        $account = EbpAccount::factory()->create();
+
+        $response = $this->actingAs($this->admin())
+            ->post("/admin/comptes/{$account->id}/manual-token", ['callback' => 'CODE_EXPIRE'])
+            ->assertRedirect("/admin/comptes/{$account->id}");
+
+        // Le message doit parler d'expiration et de relancer, pas afficher le JSON brut.
+        $error = session('error');
+        $this->assertStringContainsStringIgnoringCase('expir', $error);
+        $this->assertStringNotContainsString('invalid_grant', $error);
+        $this->assertDatabaseCount('ebp_tokens', 0);
+    }
+
     public function test_le_redirect_uri_personnalise_est_utilise_a_lechange(): void
     {
         Http::fake([

@@ -183,6 +183,14 @@ function clearCache() {
                     (la barre d'adresse, même si la page affiche une erreur) ou simplement le code.
                     Utile quand le redirect_uri whitelisté (ex. <code>localhost:3333</code>) ne pointe pas sur la gateway.
                 </p>
+                <div class="flex items-start gap-2 text-xs rounded-xl bg-[#FAC775]/25 border border-[#FAC775] text-[#633806] px-3 py-2">
+                    <AlertTriangle class="size-4 shrink-0 mt-0.5" />
+                    <span>
+                        Le code EBP expire en quelques instants et ne sert qu'une fois : collez le retour
+                        <strong>aussitôt</strong> après l'autorisation, de préférence depuis
+                        <strong>le même navigateur</strong> que « Reconnecter ». S'il est expiré, relancez « Reconnecter ».
+                    </span>
+                </div>
                 <Input v-model="manualForm.callback" placeholder="http://localhost:3333/callback?code=…&state=…  ou  le code seul" />
                 <p v-if="manualForm.errors.callback" class="text-xs text-destructive">{{ manualForm.errors.callback }}</p>
                 <div class="flex items-center gap-2">

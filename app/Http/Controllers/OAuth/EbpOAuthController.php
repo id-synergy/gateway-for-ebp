@@ -168,9 +168,32 @@ class EbpOAuthController extends Controller
             Log::error('Connexion EBP échouée', ['account' => $account->id, 'message' => $e->getMessage()]);
             $this->events->refreshFailed($account, $e->getMessage());
 
-            return redirect($return)->with('error', 'Connexion EBP échouée : '.$e->getMessage());
+            return redirect($return)->with('error', $this->explainExchangeError($e->getMessage()));
         }
 
         return redirect($return)->with('success', "Compte EBP « {$account->label} » connecté.");
+    }
+
+    /**
+     * Traduit le message d'erreur d'échange OAuth (souvent `{"error":"..."}` renvoyé par EBP)
+     * en explication actionnable pour l'admin : on sait quoi corriger (code expiré, redirect_uri
+     * incohérent, identifiants, etc.) plutôt qu'un message brut peu lisible.
+     */
+    private function explainExchangeError(string $raw): string
+    {
+        $r = strtolower($raw);
+
+        return match (true) {
+            str_contains($r, 'invalid_grant')
+                => 'Code d\'autorisation invalide ou expiré. Le code EBP n\'est valable que quelques instants et à usage unique : relancez « Reconnecter » et collez le retour aussitôt.',
+            str_contains($r, 'redirect_uri') && (str_contains($r, 'mismatch') || str_contains($r, 'invalid'))
+                => 'Le redirect_uri ne correspond pas à celui autorisé chez EBP. Vérifiez qu\'il est identique au caractère près (mode de redirection du compte / EBP_LOCALHOST_REDIRECT).',
+            str_contains($r, 'invalid_client') || str_contains($r, 'unauthorized_client')
+                => 'ClientId ou ClientSecret EBP refusé. Vérifiez les identifiants du compte dans « Modifier ».',
+            str_contains($r, 'invalid_scope')
+                => 'Portées (scope) refusées par EBP. Vérifiez la configuration du scope (openid profile offline_access).',
+            default
+                => 'Connexion EBP échouée : '.$raw,
+        };
     }
 }
