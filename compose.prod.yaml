@@ -1,0 +1,113 @@
+# =============================================================================
+# Stack de PRODUCTION « clone-and-run » pour gateway-for-ebp.
+#
+#   docker compose -f compose.prod.yaml up -d --build
+#
+# Services : app (nginx + php-fpm), horizon (workers), mysql, redis.
+# TLS : non géré ici — placez un reverse-proxy (Traefik, nginx, Caddy) devant
+# le service `app`, qui n'écoute qu'en HTTP sur 127.0.0.1:8080 par défaut.
+#
+# L'environnement de DÉVELOPPEMENT reste compose.yaml (Laravel Sail), séparé.
+# =============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gateway-for-ebp:latest
+    restart: unless-stopped
+    # Pas de env_file ici : Laravel lit lui-même le .env monté ci-dessous.
+    # Injecter ces variables dans l'environnement du conteneur casserait la clé
+    # générée au 1er boot : Dotenv ne remplace pas une variable déjà présente
+    # dans l'environnement (un APP_KEY vide injecté masquerait le .env).
+    environment:
+      CONTAINER_ROLE: app
+    volumes:
+      # .env monté en écriture : l'entrypoint y écrit l'APP_KEY générée au 1er boot.
+      - ./.env:/var/www/html/.env
+      # Données persistantes écrites au runtime (logs d'appels EBP, storage public).
+      - app-storage:/var/www/html/storage/app
+    ports:
+      # HTTP interne uniquement. Le reverse-proxy TLS cible ce port.
+      # Pour exposer directement (déconseillé sans proxy) : "0.0.0.0:8080:8080".
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - gateway
+
+  horizon:
+    image: gateway-for-ebp:latest
+    restart: unless-stopped
+    # Pas de env_file (voir le service app) : Laravel lit le .env monté.
+    environment:
+      CONTAINER_ROLE: horizon
+    command: ["php", "artisan", "horizon"]
+    volumes:
+      - ./.env:/var/www/html/.env
+      # Partage du storage avec `app` : les workers écrivent les logs d'appels
+      # EBP que le back-office relit.
+      - app-storage:/var/www/html/storage/app
+    depends_on:
+      app:
+        condition: service_healthy
+    # Horizon s'arrête proprement sur SIGTERM (termine les jobs en cours).
+    stop_signal: SIGTERM
+    stop_grace_period: 60s
+    networks:
+      - gateway
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE:-ebp_gateway}"
+      MYSQL_USER: "${DB_USERNAME:-gateway}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-${DB_PASSWORD}}"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - gateway
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - gateway
+
+networks:
+  gateway:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
+  redis-data:
+    driver: local
+  app-storage:
+    driver: local

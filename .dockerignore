@@ -1,0 +1,52 @@
+# Contexte de build Docker — on n'envoie au démon QUE le code source.
+# Les dépendances sont (ré)installées dans l'image, l'environnement et les
+# données réelles ne doivent JAMAIS entrer dans une image publiable.
+
+# Dépendances régénérées pendant le build (stages vendor/assets)
+/vendor
+/node_modules
+
+# Build front régénéré dans le stage assets
+/public/build
+/public/hot
+/public/storage
+
+# Environnement et secrets — jamais dans l'image
+.env
+.env.*
+!.env.docker.example
+
+# Données runtime et données réelles (logs d'appels EBP, caches, sessions…)
+/storage/app/private
+/storage/app/public
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
+/storage/logs
+/storage/pail
+*.key
+
+# Historique et outillage local
+/.git
+/.github
+/.idea
+/.vscode
+/.zed
+/.nova
+/.cursor
+/.codex
+/.claude
+/.phpunit.cache
+.phpunit.result.cache
+_ide_helper.php
+
+# Tests et artefacts de dev inutiles en prod
+/tests
+/.editorconfig
+/.gitattributes
+
+# Docker de dev (Sail) — sans rapport avec l'image de prod
+compose.yaml
+
+.DS_Store
+Thumbs.db
