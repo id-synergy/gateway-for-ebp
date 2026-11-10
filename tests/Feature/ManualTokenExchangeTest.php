@@ -116,6 +116,7 @@ class ManualTokenExchangeTest extends TestCase
 
         $account = EbpAccount::factory()->create([
             'environment' => 'production',
+            'redirect_mode' => 'custom',
             'custom_redirect_uri' => 'http://localhost:3333/callback',
         ]);
 
@@ -125,5 +126,38 @@ class ManualTokenExchangeTest extends TestCase
         // L'échange a bien envoyé le redirect_uri personnalisé du compte.
         Http::assertSent(fn ($request) => $request->url() === config('ebp.token_url')
             && ($request['redirect_uri'] ?? null) === 'http://localhost:3333/callback');
+    }
+
+    public function test_le_mode_localhost_utilise_le_redirect_de_config(): void
+    {
+        config(['ebp.localhost_redirect_uri' => 'http://localhost:3333/cb']);
+        $this->fakeEbp();
+
+        $account = EbpAccount::factory()->create([
+            'environment' => 'production', 'redirect_mode' => 'localhost',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post("/admin/comptes/{$account->id}/manual-token", ['callback' => 'CODE']);
+
+        Http::assertSent(fn ($request) => $request->url() === config('ebp.token_url')
+            && ($request['redirect_uri'] ?? null) === 'http://localhost:3333/cb');
+    }
+
+    public function test_le_mode_gateway_ignore_le_custom_redirect(): void
+    {
+        $this->fakeEbp();
+
+        // Mode gateway : même si une URL custom traîne, on utilise le redirect_uri global.
+        $account = EbpAccount::factory()->create([
+            'environment' => 'production', 'redirect_mode' => 'gateway',
+            'custom_redirect_uri' => 'http://localhost:9999/x',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post("/admin/comptes/{$account->id}/manual-token", ['callback' => 'CODE']);
+
+        Http::assertSent(fn ($request) => $request->url() === config('ebp.token_url')
+            && ($request['redirect_uri'] ?? null) === config('ebp.redirect_uri'));
     }
 }

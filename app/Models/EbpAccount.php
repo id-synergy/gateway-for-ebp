@@ -20,6 +20,7 @@ class EbpAccount extends Model
         'subscription_key_secondary',
         'active_subscription_key',
         'environment',
+        'redirect_mode',
         'custom_redirect_uri',
         'status',
         'is_active',
@@ -111,10 +112,11 @@ class EbpAccount extends Model
     }
 
     /**
-     * URL de redirection OAuth.
+     * URL de redirection OAuth, selon le mode de redirection du compte.
      *  - Démo / faux portail : notre propre callback (le flux boucle en local).
-     *  - Réel : redirect_uri personnalisé du compte s'il est défini (ex. localhost:3333
-     *    whitelisté chez EBP), sinon l'URL globale de config.
+     *  - gateway   : callback par défaut de la gateway (domaine validé chez EBP).
+     *  - localhost : redirect_uri localhost whitelisté d'origine (config), saisie manuelle.
+     *  - custom    : redirect_uri personnalisé du compte, saisie manuelle.
      */
     public function redirectUri(): string
     {
@@ -122,7 +124,22 @@ class EbpAccount extends Model
             return url('/oauth/ebp/callback');
         }
 
-        return $this->custom_redirect_uri ?: config('ebp.redirect_uri');
+        return match ($this->redirect_mode) {
+            'localhost' => config('ebp.localhost_redirect_uri'),
+            'custom' => $this->custom_redirect_uri ?: config('ebp.redirect_uri'),
+            default => config('ebp.redirect_uri'),
+        };
+    }
+
+    /**
+     * Le compte attend-il une saisie manuelle du retour EBP ?
+     * Vrai dès que le mode de redirection ne pointe pas sur la gateway (localhost / custom),
+     * car le callback automatique n'y reviendra jamais. C'est un choix explicite de l'admin,
+     * indépendant du faux portail (qui, lui, ne concerne que le routage des appels en dev).
+     */
+    public function usesManualCallback(): bool
+    {
+        return in_array($this->redirect_mode, ['localhost', 'custom'], true);
     }
 
     public function isDemo(): bool

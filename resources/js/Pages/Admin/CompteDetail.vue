@@ -95,6 +95,7 @@ const form = useForm({
     label: props.account.label,
     active_subscription_key: props.account.key === 'secondaire' ? 'secondary' : 'primary',
     environment: props.account.environment || 'production',
+    redirect_mode: props.account.redirectMode || 'gateway',
     custom_redirect_uri: props.account.customRedirectUri ?? '',
     cache_enabled: props.account.cacheEnabled ?? true,
     cache_ttl: props.account.cacheTtl ?? null,
@@ -166,7 +167,7 @@ function clearCache() {
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <Button size="sm" @click="connect">Reconnecter</Button>
-                    <Button variant="outline" size="sm" @click="showManual = !showManual"><ClipboardPaste class="size-3.5" /> Saisir le retour EBP</Button>
+                    <Button v-if="account.manualCallback" variant="outline" size="sm" @click="showManual = !showManual"><ClipboardPaste class="size-3.5" /> Saisir le retour EBP</Button>
                     <Button variant="outline" size="sm" @click="showEdit = !showEdit"><Settings class="size-3.5" /> Modifier</Button>
                     <Button variant="outline" size="sm" class="text-destructive" @click="remove"><Trash2 class="size-3.5" /> Supprimer</Button>
                 </div>
@@ -218,13 +219,30 @@ function clearCache() {
                         </select>
                     </div>
                     <div class="space-y-2 sm:col-span-2">
-                        <Label>Redirect URI personnalisé (optionnel)</Label>
-                        <Input v-model="form.custom_redirect_uri" type="url" placeholder="Vide = callback par défaut de la gateway" />
-                        <p v-if="form.errors.custom_redirect_uri" class="text-xs text-destructive">{{ form.errors.custom_redirect_uri }}</p>
+                        <Label>Redirection OAuth (redirect_uri)</Label>
+                        <select v-model="form.redirect_mode" class="gw-select w-full h-11 rounded-xl border border-input bg-white px-4 text-sm">
+                            <option value="gateway">Passerelle (callback de la gateway)</option>
+                            <option value="localhost">Localhost EBP (saisie manuelle du retour)</option>
+                            <option value="custom">Autre / personnalisé (saisie manuelle du retour)</option>
+                        </select>
                         <p class="text-xs text-muted-foreground">
-                            URL whitelistée chez EBP vers laquelle le portail renvoie le code (ex. <code>http://localhost:3333/…</code>).
-                            Envoyée à l'autorisation et à l'échange du code. Le renouvellement du token n'en dépend pas.
+                            <template v-if="form.redirect_mode === 'gateway'">
+                                Le portail EBP renvoie sur le callback de la gateway. À utiliser une fois le domaine validé par EBP.
+                            </template>
+                            <template v-else-if="form.redirect_mode === 'localhost'">
+                                Utilise le redirect_uri localhost whitelisté d'origine (<code>{{ account.localhostRedirect }}</code>).
+                                Après autorisation, collez le retour via « Saisir le retour EBP ».
+                            </template>
+                            <template v-else>
+                                URL whitelistée chez EBP à saisir ci-dessous. Après autorisation, collez le retour via « Saisir le retour EBP ».
+                            </template>
+                            Le renouvellement du token ne dépend pas de ce réglage.
                         </p>
+                    </div>
+                    <div v-if="form.redirect_mode === 'custom'" class="space-y-2 sm:col-span-2">
+                        <Label>Redirect URI personnalisé</Label>
+                        <Input v-model="form.custom_redirect_uri" type="url" placeholder="https://… ou http://localhost:PORT/callback" />
+                        <p v-if="form.errors.custom_redirect_uri" class="text-xs text-destructive">{{ form.errors.custom_redirect_uri }}</p>
                     </div>
                     <div class="space-y-2">
                         <Label>Cache des lectures</Label>

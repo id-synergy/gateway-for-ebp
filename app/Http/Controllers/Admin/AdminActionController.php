@@ -173,7 +173,8 @@ class AdminActionController extends Controller
             'subscription_key_secondary' => 'nullable|string',
             'active_subscription_key' => 'required|in:primary,secondary',
             'environment' => 'required|in:production,preproduction,demo',
-            'custom_redirect_uri' => 'nullable|url|max:255',
+            'redirect_mode' => 'nullable|in:gateway,localhost,custom',
+            'custom_redirect_uri' => 'nullable|url|max:255|required_if:redirect_mode,custom',
             'cache_enabled' => 'nullable|boolean',
             'cache_ttl' => 'nullable|integer|min:0|max:86400',
         ]);
@@ -184,9 +185,11 @@ class AdminActionController extends Controller
             'active_subscription_key' => $data['active_subscription_key'],
             'environment' => $data['environment'],
         ];
-        // Redirect_uri personnalisé : mis à jour seulement s'il est transmis (vide = effacé).
-        if ($request->has('custom_redirect_uri')) {
-            $update['custom_redirect_uri'] = $data['custom_redirect_uri'] ?: null;
+        // Mode de redirection OAuth + redirect_uri personnalisé (gardé seulement en mode custom).
+        if ($request->has('redirect_mode')) {
+            $mode = $data['redirect_mode'] ?: 'gateway';
+            $update['redirect_mode'] = $mode;
+            $update['custom_redirect_uri'] = $mode === 'custom' ? ($data['custom_redirect_uri'] ?: null) : null;
         }
         // Réglages de cache : mis à jour seulement s'ils sont transmis par le formulaire.
         if ($request->has('cache_enabled')) {
