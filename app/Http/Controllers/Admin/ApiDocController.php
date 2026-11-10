@@ -37,7 +37,7 @@ class ApiDocController extends Controller
     /** Télécharge le Swagger de référence de l'API EBP (doc officielle consolidée). */
     public function downloadEbpReference(): BinaryFileResponse
     {
-        return response()->download(base_path('docs/ebp-api-reference.openapi.yaml'), 'ebp-api-reference.openapi.yaml', [
+        return response()->download(base_path('openapi/ebp-reference.yaml'), 'ebp-api-reference.openapi.yaml', [
             'Content-Type' => 'application/yaml',
         ]);
     }

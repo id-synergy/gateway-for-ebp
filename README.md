@@ -60,10 +60,12 @@ Deux spécifications OpenAPI accompagnent le projet :
   - cache des lectures contournable par `?noCache=1` ; bascule en job sous charge (`202` + `jobId`) ;
   - erreurs normalisées : `401` (jeton), `429` (quota), `502` (erreur EBP), `503` (compte à reconnecter).
 
-- **`docs/ebp-api-reference.openapi.yaml`** — l'API **d'EBP** elle-même, consolidée (les 7 modules
+- **`openapi/ebp-reference.yaml`** — l'API **d'EBP** elle-même, consolidée (les 7 modules
   + l'authentification OAuth), à titre de **référence**. Elle décrit ce qu'EBP expose en amont ;
   la gateway s'appuie dessus mais ne l'expose pas telle quelle. Document reconstitué à partir de la
   documentation et du portail officiels d'EBP — il peut évoluer côté EBP.
+
+Les deux specs se téléchargent depuis le back-office (**API & doc**).
 
 ## Développement avec Docker (Laravel Sail)
 

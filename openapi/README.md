@@ -1,9 +1,18 @@
-# OpenAPI de la gateway + génération de SDK
+# Spécifications OpenAPI
 
-`gateway.yaml` décrit l'API **exposée aux applications clientes** (pas l'API EBP).
-C'est à partir de ce fichier qu'on génère les SDK que les apps utilisent.
+Ce dossier regroupe les deux specs OpenAPI du projet :
 
-La spec est aussi servie en ligne : `GET /api/v1/openapi.yaml`.
+- **`gateway.yaml`** — l'API **exposée aux applications clientes** par la gateway
+  (ping, whoami, jobs, batch, compose + les modules EBP relayés). C'est **notre**
+  artefact : il sert à générer les SDK et il est servi en ligne sur
+  `GET /api/v1/openapi.yaml`. C'est ce fichier qu'on fait évoluer.
+
+- **`ebp-reference.yaml`** — l'API **d'EBP** elle-même, consolidée (les 7 modules +
+  l'authentification), à partir de la documentation officielle EBP. C'est un
+  **document de référence** : on ne l'invente pas, on le garde fidèle à EBP pour
+  savoir quels endpoints le proxy relaie. Il n'alimente pas les SDK.
+
+Les deux sont téléchargeables depuis le back-office (page « API & doc »).
 
 ## Générer les SDK (openapi-generator)
 
