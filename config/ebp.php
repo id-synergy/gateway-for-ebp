@@ -13,7 +13,10 @@ return [
     // redirect_uri « localhost » whitelisté d'origine chez EBP (avant validation de notre domaine).
     // Sert au mode de redirection « Localhost EBP » d'un compte, avec saisie manuelle du retour.
     'localhost_redirect_uri' => env('EBP_LOCALHOST_REDIRECT', 'http://localhost:3333/callback'),
-    'authorize_url' => env('EBP_AUTHORIZE_URL', 'https://api-login.ebp.com/connect/authorize/callback'),
+    // Endpoint d'autorisation OAuth : /connect/authorize (SANS /callback — confirmé par le
+    // discovery OpenID https://api-login.ebp.com/.well-known/openid-configuration ; la doc PDF
+    // d'EBP montre à tort /connect/authorize/callback dans certains exemples).
+    'authorize_url' => env('EBP_AUTHORIZE_URL', 'https://api-login.ebp.com/connect/authorize'),
     'token_url' => env('EBP_TOKEN_URL', 'https://api-login.ebp.com/connect/token'),
     'api_base_url' => env('EBP_API_BASE_URL', 'https://api-developpeurs.ebp.com'),
     'scope' => 'openid profile offline_access',
