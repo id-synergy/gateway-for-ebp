@@ -26,10 +26,13 @@ class EnsureTwoFactorEnabled
             return $next($request);
         }
 
-        // Pages autorisées sans 2FA : le profil (pour l'activer) et les endpoints 2FA de Fortify.
+        // Pages autorisées sans 2FA : la page de profil et TOUTES les actions de compte
+        // de Fortify (changer son e-mail, son mot de passe, activer la 2FA). Cela permet
+        // au premier admin de configurer entièrement son compte avant d'activer la 2FA,
+        // sans ouvrir le reste du back-office.
         $allowed = $request->is('admin/profil')
-            || $request->is('user/two-factor-*')
-            || $request->is('user/confirmed-two-factor-*');
+            || $request->is('user/*')          // profile-information, password, two-factor-*…
+            || $request->is('logout');
 
         if ($allowed) {
             return $next($request);

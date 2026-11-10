@@ -19,6 +19,61 @@ const confirmCode = ref('');
 const busy = ref(false);
 const error = ref('');
 
+// Formulaires identité et mot de passe.
+const identity = ref({ name: props.profile.name, email: props.profile.email });
+const identityMsg = ref('');
+const identityErr = ref('');
+const pwd = ref({ current_password: '', password: '', password_confirmation: '' });
+const pwdMsg = ref('');
+const pwdErr = ref('');
+
+async function apiOrErrors(method, url, body) {
+    const res = await fetch(url, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': csrf(),
+            'X-Requested-With': 'XMLHttpRequest',
+            Accept: 'application/json',
+        },
+        credentials: 'same-origin',
+        body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 422) {
+        const data = await res.json();
+        const msgs = Object.values(data.errors || {}).flat();
+        throw new Error(msgs[0] || 'Données invalides.');
+    }
+    if (!res.ok) throw new Error('Erreur ' + res.status);
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+}
+
+async function saveIdentity() {
+    busy.value = true; identityMsg.value = ''; identityErr.value = '';
+    try {
+        await apiOrErrors('PUT', '/user/profile-information', {
+            name: identity.value.name,
+            email: identity.value.email,
+        });
+        identityMsg.value = 'Identité mise à jour.';
+        router.reload({ only: ['profile'] });
+    } catch (e) {
+        identityErr.value = e.message;
+    } finally { busy.value = false; }
+}
+
+async function savePassword() {
+    busy.value = true; pwdMsg.value = ''; pwdErr.value = '';
+    try {
+        await apiOrErrors('PUT', '/user/password', { ...pwd.value });
+        pwd.value = { current_password: '', password: '', password_confirmation: '' };
+        pwdMsg.value = 'Mot de passe modifié.';
+    } catch (e) {
+        pwdErr.value = e.message;
+    } finally { busy.value = false; }
+}
+
 function csrf() {
     return decodeURIComponent((document.cookie.match(/XSRF-TOKEN=([^;]+)/) || [])[1] || '');
 }
@@ -78,24 +133,21 @@ async function disable() {
         <template #title>Mon profil</template>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <!-- Identité -->
+            <!-- Identité (éditable) -->
             <CutCard>
                 <div class="p-5 space-y-4">
-                    <h3 class="text-base font-medium text-[#002C52]">Identité</h3>
-                    <div class="flex items-center gap-2 text-sm">
-                        <span class="size-9 rounded-full bg-primary/10 text-primary grid place-items-center"><User class="size-4" /></span>
-                        <div>
-                            <div class="text-xs text-muted-foreground">Nom</div>
-                            <div class="font-medium text-[#002C52]">{{ profile.name }}</div>
-                        </div>
+                    <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2"><User class="size-4" /> Identité</h3>
+                    <div class="space-y-2">
+                        <Label>Nom</Label>
+                        <Input v-model="identity.name" />
                     </div>
-                    <div class="flex items-center gap-2 text-sm">
-                        <span class="size-9 rounded-full bg-primary/10 text-primary grid place-items-center"><Mail class="size-4" /></span>
-                        <div>
-                            <div class="text-xs text-muted-foreground">E-mail</div>
-                            <div class="font-medium text-[#002C52]">{{ profile.email }}</div>
-                        </div>
+                    <div class="space-y-2">
+                        <Label>Adresse e-mail (identifiant de connexion)</Label>
+                        <Input v-model="identity.email" type="email" />
                     </div>
+                    <p v-if="identityErr" class="text-sm text-destructive">{{ identityErr }}</p>
+                    <p v-if="identityMsg" class="text-sm text-[#1D9E75]">{{ identityMsg }}</p>
+                    <Button :disabled="busy" @click="saveIdentity">Enregistrer</Button>
                 </div>
             </CutCard>
 
@@ -141,5 +193,28 @@ async function disable() {
                 </div>
             </CutCard>
         </div>
+
+        <!-- Mot de passe -->
+        <CutCard class="mt-4">
+            <div class="p-5 space-y-4 max-w-xl">
+                <h3 class="text-base font-medium text-[#002C52]">Changer le mot de passe</h3>
+                <div class="space-y-2">
+                    <Label>Mot de passe actuel</Label>
+                    <Input v-model="pwd.current_password" type="password" autocomplete="current-password" />
+                </div>
+                <div class="space-y-2">
+                    <Label>Nouveau mot de passe</Label>
+                    <Input v-model="pwd.password" type="password" autocomplete="new-password" />
+                    <p class="text-xs text-muted-foreground">Au moins 10 caractères.</p>
+                </div>
+                <div class="space-y-2">
+                    <Label>Confirmer le nouveau mot de passe</Label>
+                    <Input v-model="pwd.password_confirmation" type="password" autocomplete="new-password" />
+                </div>
+                <p v-if="pwdErr" class="text-sm text-destructive">{{ pwdErr }}</p>
+                <p v-if="pwdMsg" class="text-sm text-[#1D9E75]">{{ pwdMsg }}</p>
+                <Button :disabled="busy" @click="savePassword">Modifier le mot de passe</Button>
+            </div>
+        </CutCard>
     </AdminLayout>
 </template>
