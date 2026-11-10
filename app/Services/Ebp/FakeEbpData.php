@@ -105,19 +105,25 @@ class FakeEbpData
                 'Id' => 'ART001', 'Caption' => 'Motoréducteur 0,75 kW', 'DesComClear' => 'Motoréducteur 0,75 kW',
                 'SalePriceVatExcluded' => '420.00000000', 'SalePriceVatIncluded' => '504.00000000',
                 'BarCode' => '3660619000012', 'ShelfRef' => 'A-12', 'FamilyId' => 'FAR00001',
-                'SubFamilyId' => 'SF001', 'RealStock' => '5.00000000', 'ActiveState' => 0,
+                'SubFamilyId' => 'SF001', 'RealStock' => '5.00000000', 'VirtualStock' => '8.00000000',
+                'VatAmount' => '84.00000000', 'SupplierId' => 'FR01066', 'UnitId' => 'UNIT',
+                'Weight' => '12.50000000', 'Volume' => '0.03500000', 'ActiveState' => 0,
             ],
             [
                 'Id' => 'ART002', 'Caption' => 'Chaîne de transmission', 'DesComClear' => 'Chaîne de transmission',
                 'SalePriceVatExcluded' => '85.50000000', 'SalePriceVatIncluded' => '102.60000000',
                 'BarCode' => '3660619000029', 'ShelfRef' => 'B-04', 'FamilyId' => 'FAR00002',
-                'SubFamilyId' => 'SF002', 'RealStock' => '0.00000000', 'ActiveState' => 0,
+                'SubFamilyId' => 'SF002', 'RealStock' => '0.00000000', 'VirtualStock' => '0.00000000',
+                'VatAmount' => '17.10000000', 'SupplierId' => 'FR02210', 'UnitId' => 'ML',
+                'Weight' => '2.30000000', 'Volume' => '0.00000000', 'ActiveState' => 0,
             ],
             [
                 'Id' => 'ART003', 'Caption' => 'Variateur de fréquence', 'DesComClear' => 'Variateur de fréquence',
                 'SalePriceVatExcluded' => '640.00000000', 'SalePriceVatIncluded' => '768.00000000',
                 'BarCode' => '3660619000036', 'ShelfRef' => 'C-01', 'FamilyId' => 'FAR00001',
-                'SubFamilyId' => 'SF001', 'RealStock' => '12.00000000', 'ActiveState' => 1,
+                'SubFamilyId' => 'SF001', 'RealStock' => '12.00000000', 'VirtualStock' => '15.00000000',
+                'VatAmount' => '128.00000000', 'SupplierId' => 'FR01066', 'UnitId' => 'UNIT',
+                'Weight' => '4.80000000', 'Volume' => '0.01200000', 'ActiveState' => 1,
             ],
         ];
 
@@ -138,6 +144,7 @@ class FakeEbpData
             $priceIncl = round($priceExcl * 1.2, 2);
             $stock = (($i * 7) % 5 === 0) ? 0 : (($i * 3) % 40); // ~1 sur 5 en rupture
             $active = (($i % 11) === 0) ? 1 : 0;                 // ~1 sur 11 inactif
+            $units = ['UNIT', 'ML', 'KG', 'M'];
             $items[] = [
                 'Id' => sprintf('ART%03d', $i),
                 'Caption' => sprintf('%s réf. %03d', $label, $i),
@@ -149,6 +156,12 @@ class FakeEbpData
                 'FamilyId' => $families[$i % count($families)],
                 'SubFamilyId' => $subFamilies[$i % count($subFamilies)],
                 'RealStock' => sprintf('%.8f', $stock),
+                'VirtualStock' => sprintf('%.8f', $stock + ($i % 4)),
+                'VatAmount' => sprintf('%.8f', round($priceExcl * 0.2, 2)),
+                'SupplierId' => sprintf('FR%05d', 1000 + ($i % 7)),
+                'UnitId' => $units[$i % count($units)],
+                'Weight' => sprintf('%.8f', ($i % 10) + 0.5),
+                'Volume' => sprintf('%.8f', ($i % 5) / 100),
                 'ActiveState' => $active,
             ];
         }
