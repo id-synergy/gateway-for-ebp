@@ -46,14 +46,16 @@ class ApiDocController extends Controller
                 ],
             ],
             [
-                'title' => 'Proxy EBP — exemples de chemins',
-                'description' => "Proxy transparent : TOUTE requête (tout verbe) dont le chemin commence par un préfixe EBP autorisé est relayée telle quelle vers l'API EBP. On ne liste pas les endpoints — ceux-ci ne sont que des exemples. FolderId implicite (jeton, ou ?folderId=). Lectures mises en cache (bypass ?noCache=1) ; sous charge, bascule en job (202).",
+                'title' => 'Modules EBP relayés (7)',
+                'description' => "Proxy transparent : chaque module EBP est relayé vers l'API EBP (tout verbe). FolderId implicite (jeton, ?folderId=, ou corps). Lectures mises en cache (bypass ?noCache=1) ; sous charge, bascule en job (202). Détail exhaustif de tous les endpoints dans l'onglet Explorateur (Swagger).",
                 'endpoints' => [
-                    ['method' => 'GET', 'path' => '/gescom/api/v1/Folders', 'auth' => true, 'summary' => 'Dossiers du compte'],
-                    ['method' => 'GET', 'path' => '/gescom/api/v1/Clients', 'auth' => true, 'summary' => 'Clients du dossier'],
-                    ['method' => 'GET', 'path' => '/gescom/api/v1/Items/ItemsExtentedQuery', 'auth' => true, 'summary' => 'Articles du dossier'],
-                    ['method' => 'GET', 'path' => '/gescom/api/v1/Documents/SaleDocument', 'auth' => true, 'summary' => 'Documents de vente'],
-                    ['method' => 'POST', 'path' => '/gescom/api/v1/Documents/SaleDocument', 'auth' => true, 'summary' => 'Créer un document de vente (écriture relayée)'],
+                    ['method' => 'GET', 'path' => '/gescom/api/v1/Clients', 'auth' => true, 'summary' => 'Gestion — clients, articles, documents de vente/achat'],
+                    ['method' => 'GET', 'path' => '/hubbix-gctpe/api/public/v1/customers', 'auth' => true, 'summary' => 'Gestion Commerciale TPE — clients, factures, devis, avoirs'],
+                    ['method' => 'GET', 'path' => '/hubbix-cpttpe/api/v1/journals', 'auth' => true, 'summary' => 'Comptabilité TPE — journaux, écritures, comptes'],
+                    ['method' => 'GET', 'path' => '/batiment/api/v1/ScheduleEvents/ScheduleEvents', 'auth' => true, 'summary' => 'Bâtiment — interventions, affaires, documents'],
+                    ['method' => 'POST', 'path' => '/import/api/v1/ModelSettings', 'auth' => true, 'summary' => 'Import — écriture de données (folderId injecté dans le corps)'],
+                    ['method' => 'POST', 'path' => '/export/api/v1/CreateExport/{format}', 'auth' => true, 'summary' => 'Export — demandes d\'export'],
+                    ['method' => 'POST', 'path' => '/maintenance/api/v1/Folders/{folderId}/UnlogAll', 'auth' => true, 'summary' => 'Maintenance — déconnexion, verrous'],
                 ],
             ],
             [

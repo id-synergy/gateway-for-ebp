@@ -41,6 +41,30 @@ L'API EBP impose plusieurs contraintes qui rendent le branchement direct de chaq
 - `ClientId` / `ClientSecret` (reçus par mail d'EBP) et une clé d'abonnement (profil développeur).
 - Faire autoriser l'URL de redirection de votre serveur auprès d'EBP.
 
+## Documentation de l'API
+
+Deux spécifications OpenAPI accompagnent le projet :
+
+- **`openapi/gateway.yaml`** — l'API **de la gateway**, telle que vos applications l'appellent.
+  C'est la référence à utiliser pour coder vos clients : chemins exposés par la gateway,
+  authentification par **jeton d'application** (`Authorization: Bearer gw_…`), et les 7 modules EBP
+  relayés (Gestion, Gestion Commerciale TPE, Comptabilité TPE, Bâtiment, Import, Export, Maintenance).
+  Elle est servie en ligne sur `GET /api/v1/openapi.yaml` et explorable dans le back-office
+  (**API & doc → Explorateur Swagger**).
+
+  Particularités de la vue gateway :
+  - le **FolderId est optionnel partout** (URL, query ou corps) : s'il est absent, la gateway le
+    résout depuis le dossier par défaut du jeton. Les deux formes d'URL sont acceptées, par exemple
+    `GET /gescom/api/v1/Clients` (FolderId implicite) **ou**
+    `GET /gescom/api/v1/Folders/{FolderId}/Clients` (explicite) ;
+  - cache des lectures contournable par `?noCache=1` ; bascule en job sous charge (`202` + `jobId`) ;
+  - erreurs normalisées : `401` (jeton), `429` (quota), `502` (erreur EBP), `503` (compte à reconnecter).
+
+- **`docs/ebp-api-reference.openapi.yaml`** — l'API **d'EBP** elle-même, consolidée (les 7 modules
+  + l'authentification OAuth), à titre de **référence**. Elle décrit ce qu'EBP expose en amont ;
+  la gateway s'appuie dessus mais ne l'expose pas telle quelle. Document reconstitué à partir de la
+  documentation et du portail officiels d'EBP — il peut évoluer côté EBP.
+
 ## Licence
 
 MIT (à la publication).
