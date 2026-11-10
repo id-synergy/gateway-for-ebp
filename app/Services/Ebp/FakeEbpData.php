@@ -104,7 +104,7 @@ class FakeEbpData
             [
                 'Id' => 'ART001', 'Caption' => 'Motoréducteur 0,75 kW', 'DesComClear' => 'Motoréducteur 0,75 kW',
                 'SalePriceVatExcluded' => '420.00000000', 'SalePriceVatIncluded' => '504.00000000',
-                'BarCode' => '3660619000012', 'ShelfRef' => 'A-12', 'FamilyId' => 'FAR00001',
+                'BarCode' => self::ean13('366061900001'), 'ShelfRef' => 'A-12', 'FamilyId' => 'FAR00001',
                 'SubFamilyId' => 'SF001', 'RealStock' => '5.00000000', 'VirtualStock' => '8.00000000',
                 'VatAmount' => '84.00000000', 'SupplierId' => 'FR01066', 'UnitId' => 'UNIT',
                 'Weight' => '12.50000000', 'Volume' => '0.03500000', 'ActiveState' => 0,
@@ -112,7 +112,7 @@ class FakeEbpData
             [
                 'Id' => 'ART002', 'Caption' => 'Chaîne de transmission', 'DesComClear' => 'Chaîne de transmission',
                 'SalePriceVatExcluded' => '85.50000000', 'SalePriceVatIncluded' => '102.60000000',
-                'BarCode' => '3660619000029', 'ShelfRef' => 'B-04', 'FamilyId' => 'FAR00002',
+                'BarCode' => self::ean13('366061900002'), 'ShelfRef' => 'B-04', 'FamilyId' => 'FAR00002',
                 'SubFamilyId' => 'SF002', 'RealStock' => '0.00000000', 'VirtualStock' => '0.00000000',
                 'VatAmount' => '17.10000000', 'SupplierId' => 'FR02210', 'UnitId' => 'ML',
                 'Weight' => '2.30000000', 'Volume' => '0.00000000', 'ActiveState' => 0,
@@ -120,7 +120,7 @@ class FakeEbpData
             [
                 'Id' => 'ART003', 'Caption' => 'Variateur de fréquence', 'DesComClear' => 'Variateur de fréquence',
                 'SalePriceVatExcluded' => '640.00000000', 'SalePriceVatIncluded' => '768.00000000',
-                'BarCode' => '3660619000036', 'ShelfRef' => 'C-01', 'FamilyId' => 'FAR00001',
+                'BarCode' => self::ean13('366061900003'), 'ShelfRef' => 'C-01', 'FamilyId' => 'FAR00001',
                 'SubFamilyId' => 'SF001', 'RealStock' => '12.00000000', 'VirtualStock' => '15.00000000',
                 'VatAmount' => '128.00000000', 'SupplierId' => 'FR01066', 'UnitId' => 'UNIT',
                 'Weight' => '4.80000000', 'Volume' => '0.01200000', 'ActiveState' => 1,
@@ -151,7 +151,7 @@ class FakeEbpData
                 'DesComClear' => sprintf('%s réf. %03d', $label, $i),
                 'SalePriceVatExcluded' => sprintf('%.8f', $priceExcl),
                 'SalePriceVatIncluded' => sprintf('%.8f', $priceIncl),
-                'BarCode' => sprintf('36606190%05d', $i),
+                'BarCode' => self::ean13(sprintf('36606190%04d', $i)),
                 'ShelfRef' => sprintf('%s-%02d', chr(65 + ($i % 6)), $i % 20),
                 'FamilyId' => $families[$i % count($families)],
                 'SubFamilyId' => $subFamilies[$i % count($subFamilies)],
@@ -167,6 +167,22 @@ class FakeEbpData
         }
 
         return $items;
+    }
+
+    /**
+     * Complète un code à 12 chiffres par sa clé de contrôle EAN-13 (code à 13 chiffres valide).
+     * Évite le faux avertissement « code-barres non valide » sur les articles de démo.
+     */
+    private static function ean13(string $twelveDigits): string
+    {
+        $digits = str_pad(substr(preg_replace('/\D/', '', $twelveDigits), 0, 12), 12, '0', STR_PAD_LEFT);
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++) {
+            $sum += (int) $digits[$i] * ($i % 2 === 0 ? 1 : 3);
+        }
+        $check = (10 - ($sum % 10)) % 10;
+
+        return $digits.$check;
     }
 
     /**
