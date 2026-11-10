@@ -36,6 +36,13 @@ class EbpOAuthController extends Controller
         $request->session()->put('ebp_oauth_state', $state);
         $request->session()->put('ebp_oauth_account', $account->id);
 
+        // Page d'origine du clic « Reconnecter » : on y revient après le callback.
+        // Conservée seulement si elle pointe vers le back-office des comptes (même app).
+        $from = (string) $request->headers->get('referer');
+        if ($from !== '' && str_starts_with($from, url('/admin/comptes'))) {
+            $request->session()->put('ebp_oauth_return', $from);
+        }
+
         return redirect()->away($this->tokens->buildAuthorizeUrl($account, $state));
     }
 
@@ -53,6 +60,11 @@ class EbpOAuthController extends Controller
         $accountId = $request->session()->pull('ebp_oauth_account');
         $account = EbpAccount::findOrFail($accountId);
 
+        // Retour vers la page d'origine du clic (fiche compte le plus souvent),
+        // avec repli sur la fiche du compte puisqu'on le connaît.
+        $return = $request->session()->pull('ebp_oauth_return')
+            ?: route('admin.comptes.show', $account);
+
         // Le portail EBP renvoie error=... quand l'utilisateur refuse ou qu'une erreur survient.
         if ($error = (string) $request->query('error')) {
             $message = $error === 'access_denied'
@@ -61,11 +73,11 @@ class EbpOAuthController extends Controller
 
             $this->events->denied($account, $error);
 
-            return redirect('/admin/comptes')->with('error', $message);
+            return redirect($return)->with('error', $message);
         }
 
         if ($code === '') {
-            return redirect('/admin/comptes')->with('error', "Code d'autorisation manquant.");
+            return redirect($return)->with('error', "Code d'autorisation manquant.");
         }
 
         // Reconnexion = le compte possédait déjà un token avant cet échange.
@@ -79,9 +91,9 @@ class EbpOAuthController extends Controller
             Log::error('Connexion EBP échouée', ['account' => $account->id, 'message' => $e->getMessage()]);
             $this->events->refreshFailed($account, $e->getMessage());
 
-            return redirect('/admin/comptes')->with('error', 'Connexion EBP échouée : '.$e->getMessage());
+            return redirect($return)->with('error', 'Connexion EBP échouée : '.$e->getMessage());
         }
 
-        return redirect('/admin/comptes')->with('success', "Compte EBP « {$account->label} » connecté.");
+        return redirect($return)->with('success', "Compte EBP « {$account->label} » connecté.");
     }
 }

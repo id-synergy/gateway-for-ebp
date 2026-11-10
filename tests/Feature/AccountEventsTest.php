@@ -41,7 +41,7 @@ class AccountEventsTest extends TestCase
 
         $this->withSession(['ebp_oauth_state' => 'S', 'ebp_oauth_account' => $account->id])
             ->get('/oauth/ebp/callback?code=AUTH&state=S')
-            ->assertRedirect('/admin/comptes');
+            ->assertRedirect("/admin/comptes/{$account->id}");
 
         $this->assertDatabaseHas('account_events', [
             'ebp_account_id' => $account->id, 'type' => 'connected', 'level' => 'success',
@@ -81,7 +81,7 @@ class AccountEventsTest extends TestCase
 
         $this->withSession(['ebp_oauth_state' => 'S', 'ebp_oauth_account' => $account->id])
             ->get('/oauth/ebp/callback?error=access_denied&state=S')
-            ->assertRedirect('/admin/comptes')
+            ->assertRedirect("/admin/comptes/{$account->id}")
             ->assertSessionHas('error');
 
         $this->assertDatabaseHas('account_events', [

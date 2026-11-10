@@ -51,12 +51,41 @@ class EbpOAuthFlowTest extends TestCase
             ])
             ->get('/oauth/ebp/callback?code=AUTH_CODE&state=STATE123');
 
-        $response->assertRedirect('/admin/comptes');
+        $response->assertRedirect("/admin/comptes/{$account->id}");
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('ebp_tokens', ['ebp_account_id' => $account->id, 'state' => 'healthy']);
         $this->assertDatabaseHas('ebp_folders', ['ebp_account_id' => $account->id, 'folder_id' => '3691']);
         $this->assertSame('connected', $account->fresh()->status);
+    }
+
+    public function test_connect_memorise_la_page_dorigine_pour_le_retour(): void
+    {
+        Http::fake([
+            config('ebp.token_url') => Http::response([
+                'access_token' => 'A', 'refresh_token' => 'R', 'expires_in' => 3600,
+            ]),
+            '*/gescom/api/v1/Folders*' => Http::response(['folders' => []]),
+        ]);
+
+        $account = EbpAccount::factory()->create();
+        $admin = User::factory()->create(['is_active' => true]);
+        $fiche = url("/admin/comptes/{$account->id}");
+
+        // Clic « Reconnecter » depuis la fiche du compte (referer).
+        $this->actingAs($admin)
+            ->withHeaders(['referer' => $fiche])
+            ->get("/oauth/ebp/connect?account={$account->id}")
+            ->assertSessionHas('ebp_oauth_return', $fiche);
+
+        // Au retour du callback, on revient sur la fiche, pas sur la liste.
+        $this->actingAs($admin)
+            ->withSession([
+                'ebp_oauth_state' => 'S', 'ebp_oauth_account' => $account->id,
+                'ebp_oauth_return' => $fiche,
+            ])
+            ->get('/oauth/ebp/callback?code=A&state=S')
+            ->assertRedirect($fiche);
     }
 
     public function test_callback_refuse_un_state_invalide(): void
@@ -93,7 +122,7 @@ class EbpOAuthFlowTest extends TestCase
 
         $this->withSession(['ebp_oauth_state' => 'S', 'ebp_oauth_account' => $account->id])
             ->get('/oauth/ebp/callback?state=S')
-            ->assertRedirect('/admin/comptes')
+            ->assertRedirect("/admin/comptes/{$account->id}")
             ->assertSessionHas('error');
 
         $this->assertDatabaseCount('ebp_tokens', 0);
@@ -109,7 +138,7 @@ class EbpOAuthFlowTest extends TestCase
 
         $this->withSession(['ebp_oauth_state' => 'S', 'ebp_oauth_account' => $account->id])
             ->get('/oauth/ebp/callback?code=CODE_EXPIRE&state=S')
-            ->assertRedirect('/admin/comptes')
+            ->assertRedirect("/admin/comptes/{$account->id}")
             ->assertSessionHas('error');
 
         // Aucun token stocké, le compte n'est pas marqué connecté.
