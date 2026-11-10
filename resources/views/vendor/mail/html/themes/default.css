@@ -28,7 +28,7 @@ blockquote {
 }
 
 a {
-    color: #18181b;
+    color: #0046FE;
 }
 
 a img {
@@ -38,14 +38,15 @@ a img {
 /* Typography */
 
 h1 {
-    color: #18181b;
-    font-size: 18px;
+    color: #002C52;
+    font-size: 19px;
     font-weight: bold;
     margin-top: 0;
     text-align: start;
 }
 
 h2 {
+    color: #002C52;
     font-size: 16px;
     font-weight: bold;
     margin-top: 0;
@@ -80,7 +81,7 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    background-color: #fafafa;
+    background-color: #F6F2E4;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -95,18 +96,45 @@ img {
     width: 100%;
 }
 
-/* Header */
+/* Header — charte Gateway EBP */
 
 .header {
-    padding: 25px 0;
+    padding: 30px 0 22px;
     text-align: center;
 }
 
 .header a {
-    color: #18181b;
-    font-size: 19px;
+    color: #002C52;
+    font-size: 20px;
     font-weight: bold;
     text-decoration: none;
+}
+
+.brand-badge {
+    display: inline-block;
+    background-color: #0046FE;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    padding: 6px 9px;
+    border-radius: 9px;
+    margin-right: 9px;
+    vertical-align: middle;
+}
+
+.brand-name {
+    color: #002C52;
+    font-size: 20px;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.brand-tagline {
+    margin-top: 8px;
+    color: #6b7b8c;
+    font-size: 12px;
+    letter-spacing: 0.3px;
 }
 
 /* Logo */
@@ -125,9 +153,9 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    background-color: #fafafa;
-    border-bottom: 1px solid #fafafa;
-    border-top: 1px solid #fafafa;
+    background-color: #F6F2E4;
+    border-bottom: 1px solid #F6F2E4;
+    border-top: 1px solid #F6F2E4;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -138,10 +166,10 @@ img {
     -premailer-cellspacing: 0;
     -premailer-width: 570px;
     background-color: #ffffff;
-    border-color: #e4e4e7;
-    border-radius: 4px;
+    border-color: #E4DFCE;
+    border-radius: 16px;
     border-width: 1px;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px 0 rgba(0, 44, 82, 0.08), 0 1px 2px -1px rgba(0, 44, 82, 0.08);
     margin: 0 auto;
     padding: 0;
     width: 570px;
@@ -230,38 +258,39 @@ img {
 
 .button {
     -webkit-text-size-adjust: none;
-    border-radius: 4px;
+    border-radius: 10px;
     color: #fff;
     display: inline-block;
+    font-weight: 600;
     overflow: hidden;
     text-decoration: none;
 }
 
 .button-blue,
 .button-primary {
-    background-color: #18181b;
-    border-bottom: 8px solid #18181b;
-    border-left: 18px solid #18181b;
-    border-right: 18px solid #18181b;
-    border-top: 8px solid #18181b;
+    background-color: #0046FE;
+    border-bottom: 8px solid #0046FE;
+    border-left: 18px solid #0046FE;
+    border-right: 18px solid #0046FE;
+    border-top: 8px solid #0046FE;
 }
 
 .button-green,
 .button-success {
-    background-color: #16a34a;
-    border-bottom: 8px solid #16a34a;
-    border-left: 18px solid #16a34a;
-    border-right: 18px solid #16a34a;
-    border-top: 8px solid #16a34a;
+    background-color: #1D9E75;
+    border-bottom: 8px solid #1D9E75;
+    border-left: 18px solid #1D9E75;
+    border-right: 18px solid #1D9E75;
+    border-top: 8px solid #1D9E75;
 }
 
 .button-red,
 .button-error {
-    background-color: #dc2626;
-    border-bottom: 8px solid #dc2626;
-    border-left: 18px solid #dc2626;
-    border-right: 18px solid #dc2626;
-    border-top: 8px solid #dc2626;
+    background-color: #E24B4A;
+    border-bottom: 8px solid #E24B4A;
+    border-left: 18px solid #E24B4A;
+    border-right: 18px solid #E24B4A;
+    border-top: 8px solid #E24B4A;
 }
 
 /* Panels */

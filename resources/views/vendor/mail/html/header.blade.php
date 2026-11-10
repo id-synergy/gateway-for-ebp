@@ -1,12 +1,9 @@
 @props(['url'])
 <tr>
 <td class="header">
-<a href="{{ $url }}" style="display: inline-block;">
-@if (trim($slot) === 'Laravel')
-<img src="https://laravel.com/img/notification-logo-v2.1.png" class="logo" alt="Laravel Logo">
-@else
-{!! $slot !!}
-@endif
+<a href="{{ $url }}" style="display: inline-block; text-decoration: none;">
+<span class="brand-badge">EBP</span><span class="brand-name">Gateway&nbsp;EBP</span>
 </a>
+<div class="brand-tagline">Passerelle d'accès à l'API EBP</div>
 </td>
 </tr>
