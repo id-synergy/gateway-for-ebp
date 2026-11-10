@@ -10,6 +10,7 @@ class AppToken extends Model
     protected $fillable = [
         'name',
         'token_hash',
+        'encrypted_token',
         'ebp_account_id',
         'default_folder_id',
         'is_active',
@@ -19,15 +20,23 @@ class AppToken extends Model
 
     protected $hidden = [
         'token_hash',
+        'encrypted_token',
     ];
 
     protected function casts(): array
     {
         return [
+            'encrypted_token' => 'encrypted',
             'is_active' => 'boolean',
             'revoked_at' => 'datetime',
             'last_used_at' => 'datetime',
         ];
+    }
+
+    /** Jeton en clair (déchiffré), ou null pour un jeton créé avant le stockage chiffré. */
+    public function plainToken(): ?string
+    {
+        return $this->encrypted_token ?: null;
     }
 
     public function account(): BelongsTo

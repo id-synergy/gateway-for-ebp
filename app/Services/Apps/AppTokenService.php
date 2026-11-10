@@ -29,6 +29,9 @@ class AppTokenService
         $token = AppToken::create([
             'name' => $name,
             'token_hash' => $this->hash($plain),
+            // Copie chiffrée du clair : permet de ré-afficher le QR d'appairage (même jeton,
+            // plusieurs appareils) sans régénérer. La validation se fait toujours sur le hash.
+            'encrypted_token' => $plain,
             'ebp_account_id' => $account->id,
             'default_folder_id' => $defaultFolder?->id,
             'is_active' => true,
@@ -69,6 +72,7 @@ class AppTokenService
 
         $token->update([
             'token_hash' => $this->hash($plain),
+            'encrypted_token' => $plain,
             'last_used_at' => null,
         ]);
 

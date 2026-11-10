@@ -73,7 +73,7 @@ class PairingTest extends TestCase
         $this->postJson('/api/v1/pairing/claim', ['code' => $gen['code']])->assertStatus(410);
     }
 
-    public function test_le_jeton_renvoye_est_bien_le_nouveau_jeton_valide(): void
+    public function test_le_jeton_renvoye_authentifie_sur_lapi(): void
     {
         $admin = $this->admin('secret-123456');
         $token = $this->token();
@@ -89,6 +89,40 @@ class PairingTest extends TestCase
             ->getJson('/api/v1/whoami')
             ->assertOk()
             ->assertJsonPath('app', 'App mobile');
+    }
+
+    public function test_deux_appairages_donnent_le_meme_jeton_sans_le_regenerer(): void
+    {
+        $admin = $this->admin('secret-123456');
+        $token = $this->token();
+        $hashAvant = $token->token_hash;
+
+        // Deux appairages successifs (ex. deux téléphones).
+        $gen1 = $this->actingAs($admin)->postJson("/admin/jetons/{$token->id}/pairing", ['password' => 'secret-123456'])->json();
+        $plain1 = $this->postJson('/api/v1/pairing/claim', ['code' => $gen1['code']])->json('token');
+
+        $gen2 = $this->actingAs($admin)->postJson("/admin/jetons/{$token->id}/pairing", ['password' => 'secret-123456'])->json();
+        $plain2 = $this->postJson('/api/v1/pairing/claim', ['code' => $gen2['code']])->json('token');
+
+        // Même jeton transmis aux deux appareils.
+        $this->assertSame($plain1, $plain2);
+        // Le jeton n'a PAS été régénéré (hash inchangé) : les appareils déjà connectés restent valides.
+        $this->assertSame($hashAvant, $token->fresh()->token_hash);
+    }
+
+    public function test_un_jeton_sans_clair_stocke_demande_une_regeneration(): void
+    {
+        $admin = $this->admin('secret-123456');
+        $account = EbpAccount::factory()->create();
+        // Jeton « ancien » : créé sans encrypted_token (comme avant la migration).
+        $token = AppToken::create([
+            'name' => 'Ancien', 'token_hash' => 'h', 'ebp_account_id' => $account->id, 'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson("/admin/jetons/{$token->id}/pairing", ['password' => 'secret-123456'])
+            ->assertStatus(409)
+            ->assertJsonPath('needs_regeneration', true);
     }
 
     public function test_un_code_expire_est_refuse(): void

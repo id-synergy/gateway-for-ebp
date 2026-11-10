@@ -5,8 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AppToken;
 use App\Models\PairingCode;
-use App\Services\Accounts\AccountEventLogger;
-use App\Services\Apps\AppTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -15,10 +13,11 @@ use Illuminate\Support\Str;
 /**
  * Appairage d'une application à un jeton, sans jamais exposer le jeton dans un QR.
  *
- * Le bouton « Connecter » régénère la clé du jeton (on obtient un clair frais), crée un
- * code d'appairage à usage unique (10 min) qui mémorise ce clair chiffré, et renvoie au
+ * Le bouton « Connecter » transmet le MÊME jeton (sans le régénérer) : plusieurs appareils
+ * peuvent donc être appairés au même jeton et fonctionner simultanément. On crée un code
+ * d'appairage à usage unique (10 min) qui mémorise ce jeton chiffré, et on renvoie au
  * navigateur le code + l'endpoint pour fabriquer le QR. L'application scanne le QR puis
- * réclame le vrai jeton via l'endpoint public /api/v1/pairing/claim.
+ * réclame le jeton via l'endpoint public /api/v1/pairing/claim.
  *
  * Protégé par re-saisie du mot de passe administrateur à chaque affichage.
  */
@@ -26,11 +25,6 @@ class PairingController extends Controller
 {
     /** Durée de vie d'un code d'appairage. */
     private const TTL_MINUTES = 10;
-
-    public function __construct(
-        protected AppTokenService $tokens,
-        protected AccountEventLogger $events,
-    ) {}
 
     /** POST /admin/jetons/{token}/pairing — génère un code d'appairage (mot de passe requis). */
     public function create(Request $request, AppToken $token): JsonResponse
@@ -46,9 +40,19 @@ class PairingController extends Controller
             return response()->json(['message' => 'Ce jeton est révoqué : créez-en un nouveau.'], 422);
         }
 
-        // Régénère la clé pour obtenir un clair frais (l'ancienne clé est invalidée).
-        $plainToken = $this->tokens->regenerate($token);
-        $this->events->tokenRegenerated($token->account, $token->name);
+        // On transmet le MÊME jeton (pas de régénération) : plusieurs appareils peuvent donc
+        // être appairés au même jeton et fonctionner en même temps. Régénérer la clé reste
+        // l'action explicite qui les déconnecte tous.
+        $plainToken = $token->plainToken();
+
+        // Jetons créés avant le stockage chiffré : pas de clair disponible → il faut
+        // régénérer une fois pour les amorcer (le QR ne peut pas transmettre un clair perdu).
+        if ($plainToken === null) {
+            return response()->json([
+                'message' => "Ce jeton date d'avant l'appairage : régénérez-le une fois (les appareils déjà connectés devront rescanner), puis réessayez.",
+                'needs_regeneration' => true,
+            ], 409);
+        }
 
         // Un seul code d'appairage en attente par jeton : on remplace le précédent.
         PairingCode::where('app_token_id', $token->id)->whereNull('consumed_at')->delete();

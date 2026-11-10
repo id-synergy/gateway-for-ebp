@@ -42,13 +42,19 @@ function revoke(id) {
 }
 
 // --- Appairage d'une application (QR à code à usage unique) ---
-const pairing = ref({ open: false, step: 'password', token: null, password: '', error: '', busy: false });
+const pairing = ref({ open: false, step: 'password', token: null, password: '', error: '', busy: false, needsRegen: false });
 const pairingCanvas = ref(null);
 const countdown = ref(0);
 let countdownTimer = null;
 
 function openPairing(token) {
-    pairing.value = { open: true, step: 'password', token, password: '', error: '', busy: false };
+    pairing.value = { open: true, step: 'password', token, password: '', error: '', busy: false, needsRegen: false };
+}
+function regenerateFromPairing() {
+    // Amorce un ancien jeton : régénère (déconnecte les appareils actuels), puis on pourra appairer.
+    const t = pairing.value.token;
+    closePairing();
+    regenerate(t);
 }
 function closePairing() {
     pairing.value.open = false;
@@ -72,6 +78,13 @@ async function startPairing() {
         if (res.status === 422) {
             const d = await res.json();
             pairing.value.error = d.message || 'Mot de passe incorrect.';
+            return;
+        }
+        // Jeton créé avant le stockage chiffré : il faut le régénérer une fois.
+        if (res.status === 409) {
+            const d = await res.json();
+            pairing.value.error = d.message;
+            pairing.value.needsRegen = true;
             return;
         }
         if (!res.ok) throw new Error(res.status);
@@ -309,7 +322,7 @@ function regenerate(token) {
                     <template v-if="pairing.step === 'password'">
                         <p class="text-sm text-muted-foreground mb-4">
                             Pour afficher le QR code d'appairage, confirmez votre mot de passe administrateur.
-                            Un nouveau jeton sera généré et l'ancien cessera de fonctionner.
+                            Le QR transmet ce jeton sans le changer : vous pouvez connecter plusieurs appareils.
                         </p>
                         <form @submit.prevent="startPairing" class="space-y-3">
                             <div class="space-y-2">
@@ -317,7 +330,8 @@ function regenerate(token) {
                                 <Input v-model="pairing.password" type="password" autocomplete="current-password" />
                                 <p v-if="pairing.error" class="text-xs text-destructive">{{ pairing.error }}</p>
                             </div>
-                            <Button type="submit" :disabled="pairing.busy || !pairing.password" class="w-full">Afficher le QR code</Button>
+                            <Button v-if="!pairing.needsRegen" type="submit" :disabled="pairing.busy || !pairing.password" class="w-full">Afficher le QR code</Button>
+                            <Button v-else type="button" variant="outline" class="w-full" @click="regenerateFromPairing">Régénérer la clé maintenant</Button>
                         </form>
                     </template>
 
