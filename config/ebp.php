@@ -66,12 +66,36 @@ return [
 
         // Proxy transparent vers l'API EBP : toute requête (tout verbe) dont le chemin
         // commence par l'un de ces préfixes est relayée telle quelle vers EBP (auth, quota,
-        // cache en lecture, logs ajoutés). Tout chemin hors liste -> 404. Couvre les modules
-        // SaaS Gestion EBP (gescom, et les autres au besoin : bâtiment, maintenance, point de vente…).
+        // cache en lecture, logs ajoutés). Tout chemin hors liste -> 404.
+        //
+        // Un préfixe inclut le segment de version (…/v1 ou …/public/v1) : l'injection du
+        // FolderId suppose le format <prefixe>/Folders/{id}/…. Les 7 modules EBP sont couverts
+        // par défaut ; surchargeable via EBP_PROXY_PREFIXES (liste séparée par des virgules).
         'proxy' => [
             'allowed_prefixes' => array_values(array_filter(array_map(
                 'trim',
-                explode(',', (string) env('EBP_PROXY_PREFIXES', 'gescom/api/v1'))
+                explode(',', (string) env('EBP_PROXY_PREFIXES', implode(',', [
+                    'gescom/api/v1',            // SAAS API Gestion
+                    'hubbix-gctpe/api/public/v1', // HUBBIX Gestion Commerciale TPE
+                    'hubbix-cpttpe/api/v1',     // HUBBIX Comptabilité TPE
+                    'batiment/api/v1',          // SAAS API Bâtiment
+                    'import/api/v1',            // SAAS API Import
+                    'export/api/v1',            // SAAS API Export
+                    'maintenance/api/v1',       // SAAS API Maintenance
+                ])))
+            ))),
+
+            // Préfixes dont les ressources vivent DANS un dossier (chemin …/Folders/{FolderId}/…).
+            // Pour EUX seulement, la gateway injecte le FolderId dans l'URL. Les autres modules
+            // (gctpe, cpttpe, import, export) ne suivent pas ce modèle : le dossier passe par le
+            // header (DomainId/tenantid) ou le corps (import/export), jamais dans l'URL.
+            'folder_url_prefixes' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('EBP_FOLDER_URL_PREFIXES', implode(',', [
+                    'gescom/api/v1',
+                    'batiment/api/v1',
+                    'maintenance/api/v1',
+                ])))
             ))),
         ],
     ],

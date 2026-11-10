@@ -24,15 +24,35 @@ class EbpPath
     }
 
     /**
-     * L'endpoint cible-t-il une ressource DANS un dossier (donc un dossier est requis) ?
+     * L'endpoint cible-t-il une ressource DANS un dossier, avec FolderId dans l'URL ?
      *
-     * Non pour la racine du module et pour `.../Folders` (qui LISTE les dossiers) :
-     * ces appels doivent fonctionner même sans dossier résolu.
+     * Vrai seulement pour les modules qui suivent le modèle …/Folders/{FolderId}/… (gescom,
+     * batiment, maintenance) ET quand l'endpoint n'est pas la racine du module ni `.../Folders`
+     * (qui LISTE les dossiers). Pour les modules « plats » (gctpe, cpttpe, import, export), le
+     * dossier passe par un header ou le corps : jamais d'injection de FolderId dans l'URL.
      */
     public static function needsFolder(string $path, string $prefix): bool
     {
+        if (! self::usesFolderUrl($prefix)) {
+            return false;
+        }
+
         $rest = ltrim(substr($path, strlen($prefix)), '/');
 
         return $rest !== '' && $rest !== 'Folders';
+    }
+
+    /** Le module (préfixe) place-t-il le FolderId dans l'URL (modèle …/Folders/{id}/…) ? */
+    public static function usesFolderUrl(string $prefix): bool
+    {
+        $prefix = trim($prefix, '/');
+
+        foreach ((array) config('ebp.gateway.proxy.folder_url_prefixes', []) as $fp) {
+            if (trim((string) $fp, '/') === $prefix) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -82,7 +82,10 @@ class EbpProxyController extends Controller
         }
 
         // 3. Relai vers EBP (lecture ou écriture), via quota + logs.
+        // Le FolderId peut être injecté dans le corps pour les écritures qui l'attendent là
+        // (Import/Export) ; on ne l'ajoute pas quand le chemin porte déjà un dossier.
         $body = $isRead ? null : $request->json()->all();
+        $body = $this->injectFolderInBody($body, $folder, str_contains($endpoint, '/Folders/'));
         $result = $this->client->send($account, $folder, $method, $endpoint, $query, $body);
 
         $payload = [
@@ -113,16 +116,59 @@ class EbpProxyController extends Controller
      */
     protected function withFolder(string $path, string $prefix, ?EbpFolder $folder): string
     {
+        // Seuls les modules « Folders » (gescom, batiment, maintenance) portent le FolderId
+        // dans l'URL. Pour les autres, on ne touche pas au chemin.
+        if (! EbpPath::needsFolder($path, $prefix)) {
+            return $path;
+        }
+
         $rest = ltrim(substr($path, strlen($prefix)), '/');
 
-        // Racine du module (liste des dossiers, ou appel sans ressource) : pas de FolderId.
-        // (le dossier peut légitimement être null dans ce cas.)
-        if ($rest === '' || $rest === 'Folders' || str_starts_with($rest, 'Folders/')) {
+        // Déjà écrit par l'app (…/Folders/{id}/…) : on le laisse tel quel.
+        if (str_starts_with($rest, 'Folders/')) {
             return $path;
         }
 
         // Ici le garde-fou de handle() a déjà garanti un dossier non-null.
         return $prefix.'/Folders/'.$folder->folder_id.'/'.$rest;
+    }
+
+    /**
+     * Injecte le FolderId dans le corps d'une écriture quand l'app ne l'a pas fourni.
+     *
+     * Certains endpoints EBP (Import/ModelSettings, Export/CreateExport) attendent `folderId`
+     * dans le corps JSON (pas dans l'URL). On le renseigne depuis le dossier résolu si la clé
+     * est absente ou vide ; une valeur déjà fournie par l'app est respectée. Sans dossier résolu
+     * ou si le corps n'est pas un objet, on ne touche à rien.
+     *
+     * @param  mixed  $body
+     * @param  bool  $folderInPath  Le chemin porte déjà un /Folders/{id}/ — on n'ajoute alors pas la clé.
+     * @return mixed
+     */
+    protected function injectFolderInBody(mixed $body, ?EbpFolder $folder, bool $folderInPath): mixed
+    {
+        if (! $folder || ! is_array($body) || array_is_list($body)) {
+            return $body;
+        }
+
+        // Si l'app a déjà mis folderId/FolderId : on respecte sa valeur, on ne complète que si vide.
+        foreach (['folderId', 'FolderId'] as $key) {
+            if (array_key_exists($key, $body)) {
+                if (blank($body[$key])) {
+                    $body[$key] = $folder->folder_id;
+                }
+
+                return $body;
+            }
+        }
+
+        // Clé absente : on ne l'ajoute que si le dossier n'est pas déjà dans l'URL
+        // (cas Import/Export, qui attendent folderId dans le corps). Casse attendue par EBP.
+        if (! $folderInPath) {
+            $body['folderId'] = $folder->folder_id;
+        }
+
+        return $body;
     }
 
     /**
