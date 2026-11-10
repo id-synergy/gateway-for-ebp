@@ -46,6 +46,31 @@ paths:
                 properties:
                   ok: { type: boolean }
                   service: { type: string }
+  /api/v1/whoami:
+    get:
+      tags: [Santé]
+      summary: Contexte résolu pour le jeton (app, compte EBP, dossier)
+      description: >
+        Écho du contexte résolu par la gateway pour le jeton présenté : nom de l'application,
+        libellé du compte EBP et dossier par défaut. Sert à vérifier l'authentification et la
+        résolution compte/dossier. `folder` vaut null si le jeton n'a pas de dossier par défaut.
+      responses:
+        '200':
+          description: Contexte du jeton
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  app: { type: string, description: Nom de l'application cliente }
+                  account: { type: string, description: Libellé du compte EBP }
+                  folder:
+                    nullable: true
+                    type: object
+                    properties:
+                      id: { type: string }
+                      label: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   # Miroir des endpoints EBP officiels (mêmes chemins que la doc EBP SaaS Gestion).
   # Le FolderId est implicite : résolu par le jeton d'app, ou passé en ?folderId=.
   # Réponses mises en cache côté gateway (allège le quota EBP) ; 'cached: true' si servi du cache.
