@@ -99,7 +99,7 @@ class EbpClient
     {
         // Mode démo : réponse simulée, sans appel réseau (ni quota consommé).
         if ($account->usesFakeEbp()) {
-            return $this->demoResponse($method, $endpoint, $body);
+            return $this->demoResponse($method, $endpoint, $query, $body);
         }
 
         $url = rtrim($account->apiBaseUrl(), '/').'/'.ltrim($endpoint, '/');
@@ -181,7 +181,7 @@ class EbpClient
      * Construit une réponse simulée (mode démo) selon le verbe et l'endpoint EBP visé,
      * sans aucun appel réseau. Préserve le format exact (wrappers, décimaux) de l'API réelle.
      */
-    protected function demoResponse(string $method, string $endpoint, mixed $body): Response
+    protected function demoResponse(string $method, string $endpoint, array $query, mixed $body): Response
     {
         // Écritures : on renvoie une création/acceptation simulée, en écho du corps reçu.
         if ($method !== 'GET') {
@@ -193,7 +193,7 @@ class EbpClient
 
         $payload = match (true) {
             str_contains($endpoint, '/Clients') => FakeEbpData::clients(),
-            str_contains($endpoint, '/Items') => FakeEbpData::items(),
+            str_contains($endpoint, '/Items') => FakeEbpData::items($query),
             str_contains($endpoint, '/Documents') => FakeEbpData::documents(),
             str_contains($endpoint, '/Folders') => FakeEbpData::folders(),
             default => ['results' => [], 'paging' => ['offset' => 0, 'limit' => 100, 'total' => 0]],

@@ -83,10 +83,10 @@ class FakeEbpController extends Controller
         return response()->json(FakeEbpData::clients());
     }
 
-    /** GET .../Folders/{folder}/Items... — articles simulés. */
+    /** GET .../Folders/{folder}/Items... — articles simulés (filtrés et paginés). */
     public function items(Request $request, string $folder): JsonResponse
     {
-        return response()->json(FakeEbpData::items());
+        return response()->json(FakeEbpData::items($request->query()));
     }
 
     /** GET .../Folders/{folder}/Documents/{type} — documents de vente/achat simulés. */
