@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Plus, Copy } from 'lucide-vue-next';
+import { Plus, Copy, Check, RefreshCw } from 'lucide-vue-next';
 
 const props = defineProps({
     tokens: { type: Array, default: () => [] },
@@ -21,6 +21,7 @@ const props = defineProps({
 
 const page = usePage();
 const showForm = ref(false);
+const copied = ref(false);
 
 const form = useForm({ name: '', ebp_account_id: props.accounts[0]?.id ?? null, default_folder_id: null });
 
@@ -33,6 +34,58 @@ function revoke(id) {
     if (confirm('Révoquer ce jeton ? Les apps qui l\'utilisent perdront l\'accès.')) {
         router.delete(`/admin/jetons/${id}`);
     }
+}
+
+// Copie du jeton : API Clipboard moderne, avec repli (execCommand) si indisponible (http, focus perdu…).
+async function copyToken(value) {
+    let ok = false;
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(value);
+            ok = true;
+        }
+    } catch (e) {
+        ok = false;
+    }
+    if (!ok) {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = value;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+        } catch (e) {
+            ok = false;
+        }
+    }
+    if (ok) {
+        copied.value = true;
+        setTimeout(() => { copied.value = false; }, 1600);
+    } else {
+        window.prompt('Copiez le jeton manuellement :', value);
+    }
+}
+
+// Régénération : double confirmation, car l'ancienne clé cesse immédiatement de fonctionner.
+function regenerate(token) {
+    const first = window.confirm(
+        `Régénérer la clé du jeton « ${token.name} » ?\n\n`
+        + `ATTENTION : l'application qui utilise la clé actuelle ne pourra plus accéder à EBP `
+        + `tant qu'elle n'aura pas reçu la nouvelle clé.`,
+    );
+    if (!first) return;
+
+    const second = window.confirm(
+        `Êtes-vous sûr ? Cette action est IRRÉVERSIBLE.\n\n`
+        + `L'ancienne clé sera définitivement invalidée. La nouvelle clé ne sera affichée qu'une seule fois.`,
+    );
+    if (!second) return;
+
+    router.post(`/admin/jetons/${token.id}/regenerate`, {}, { preserveScroll: true });
 }
 </script>
 
@@ -49,8 +102,12 @@ function revoke(id) {
                 <p class="text-sm font-medium text-[#002C52] mb-2">Nouveau jeton (copiez-le maintenant, il ne sera plus affiché) :</p>
                 <div class="flex items-center gap-2">
                     <code class="flex-1 text-xs bg-muted rounded-lg px-3 py-2.5 break-all">{{ page.props.flash.newToken }}</code>
-                    <Button variant="outline" size="icon" aria-label="Copier" @click="navigator.clipboard.writeText(page.props.flash.newToken)"><Copy class="size-4" /></Button>
+                    <Button variant="outline" size="icon" :aria-label="copied ? 'Copié' : 'Copier'" @click="copyToken(page.props.flash.newToken)">
+                        <Check v-if="copied" class="size-4 text-[#1D9E75]" />
+                        <Copy v-else class="size-4" />
+                    </Button>
                 </div>
+                <p v-if="copied" class="text-xs text-[#1D9E75] mt-1.5">Jeton copié dans le presse-papiers.</p>
             </div>
         </CutCard>
 
@@ -108,8 +165,12 @@ function revoke(id) {
                             <TableCell class="text-muted-foreground">{{ t.lastUsed }}</TableCell>
                             <TableCell><Badge :variant="t.active ? 'default' : 'secondary'">{{ t.active ? 'Actif' : 'Révoqué' }}</Badge></TableCell>
                             <TableCell class="text-right">
-                                <Button v-if="t.active" variant="ghost" size="sm" class="text-destructive" @click="revoke(t.id)">Révoquer</Button>
-                                <span v-else class="text-xs text-muted-foreground">—</span>
+                                <div class="flex items-center justify-end gap-1">
+                                    <Button variant="ghost" size="sm" @click="regenerate(t)">
+                                        <RefreshCw class="size-3.5" /> Régénérer la clé
+                                    </Button>
+                                    <Button v-if="t.active" variant="ghost" size="sm" class="text-destructive" @click="revoke(t.id)">Révoquer</Button>
+                                </div>
                             </TableCell>
                         </TableRow>
                     </TableBody>

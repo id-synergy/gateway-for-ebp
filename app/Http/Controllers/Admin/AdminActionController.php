@@ -46,6 +46,14 @@ class AdminActionController extends Controller
         return back()->with('success', 'Jeton révoqué.');
     }
 
+    public function regenerateToken(AppToken $token): RedirectResponse
+    {
+        $plain = $this->tokens->regenerate($token);
+
+        // Le nouveau jeton en clair n'est montré qu'une fois, via le flash.
+        return back()->with('newToken', $plain);
+    }
+
     public function storeIp(Request $request): RedirectResponse
     {
         $data = $request->validate([

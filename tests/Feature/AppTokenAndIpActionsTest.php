@@ -44,6 +44,39 @@ class AppTokenAndIpActionsTest extends TestCase
         $this->assertFalse($token->fresh()->is_active);
     }
 
+    public function test_regeneration_dun_jeton_change_la_cle_et_invalide_l_ancienne(): void
+    {
+        $account = EbpAccount::factory()->create();
+        $folder = EbpFolder::factory()->create(['ebp_account_id' => $account->id]);
+        [$token, $ancienneCle] = app(\App\Services\Apps\AppTokenService::class)->create('App', $account, $folder);
+
+        $this->actingAs($this->admin())
+            ->post("/admin/jetons/{$token->id}/regenerate")
+            ->assertRedirect()
+            ->assertSessionHas('newToken');
+
+        $service = app(\App\Services\Apps\AppTokenService::class);
+        // L'ancienne clé ne résout plus ; une nouvelle a été émise.
+        $this->assertNull($service->resolve($ancienneCle));
+        $this->assertNotSame('h', $token->fresh()->token_hash);
+        // Régénérer réactive et conserve l'app/compte/dossier.
+        $this->assertTrue($token->fresh()->is_active);
+        $this->assertSame($folder->id, $token->fresh()->default_folder_id);
+    }
+
+    public function test_regeneration_reactive_un_jeton_revoque(): void
+    {
+        $account = EbpAccount::factory()->create();
+        [$token] = app(\App\Services\Apps\AppTokenService::class)->create('App', $account);
+        app(\App\Services\Apps\AppTokenService::class)->revoke($token);
+        $this->assertFalse($token->fresh()->is_active);
+
+        $this->actingAs($this->admin())->post("/admin/jetons/{$token->id}/regenerate")->assertRedirect();
+
+        $this->assertTrue($token->fresh()->is_active);
+        $this->assertNull($token->fresh()->revoked_at);
+    }
+
     public function test_ajout_et_suppression_dip(): void
     {
         $admin = $this->admin();

@@ -54,6 +54,26 @@ class AppTokenService
         $token->update(['is_active' => false, 'revoked_at' => now()]);
     }
 
+    /**
+     * Régénère la clé d'un jeton EXISTANT : nouvelle valeur, même app/compte/dossier.
+     * L'ancienne clé cesse immédiatement de fonctionner (irréversible). Réactive le jeton.
+     *
+     * @return string Le nouveau jeton en clair (à montrer une seule fois).
+     */
+    public function regenerate(AppToken $token): string
+    {
+        $plain = self::PREFIX.Str::random(40);
+
+        $token->update([
+            'token_hash' => $this->hash($plain),
+            'is_active' => true,
+            'revoked_at' => null,
+            'last_used_at' => null,
+        ]);
+
+        return $plain;
+    }
+
     public function hash(string $plain): string
     {
         return hash('sha256', $plain);
