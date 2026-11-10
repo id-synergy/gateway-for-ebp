@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Plug, FolderOpen, KeyRound, Activity, ArrowLeft, AlertTriangle, Settings, Trash2, RefreshCw,
-    Plug2, PlugZap, Ban, FolderSync, ShieldAlert, CheckCircle2, Clock,
+    Plug2, PlugZap, Ban, FolderSync, ShieldAlert, CheckCircle2, Clock, Eraser,
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -32,7 +32,7 @@ let observer = null;
 // Icône et couleurs par type/niveau d'événement.
 const eventIcon = {
     connected: Plug2, reconnected: PlugZap, token_refreshed: RefreshCw, refresh_failed: ShieldAlert,
-    denied: Ban, folders_synced: FolderSync,
+    denied: Ban, folders_synced: FolderSync, cache_cleared: Eraser,
     app_token_created: KeyRound, app_token_revoked: KeyRound, app_token_regenerated: KeyRound,
 };
 const levelStyle = {

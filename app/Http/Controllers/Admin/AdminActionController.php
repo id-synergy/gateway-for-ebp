@@ -224,6 +224,7 @@ class AdminActionController extends Controller
     public function clearAccountCache(EbpAccount $account, \App\Services\Ebp\GatewayCache $cache): RedirectResponse
     {
         $cache->flushAccount($account);
+        $this->events->cacheCleared($account);
 
         return back()->with('success', "Cache de lecture du compte « {$account->label} » vidé.");
     }
@@ -232,6 +233,9 @@ class AdminActionController extends Controller
     public function clearAllCache(\App\Services\Ebp\GatewayCache $cache): RedirectResponse
     {
         $cache->flushAll();
+
+        // Purge globale : tracée dans le journal de chaque compte.
+        EbpAccount::each(fn (EbpAccount $account) => $this->events->cacheCleared($account, global: true));
 
         return back()->with('success', 'Tout le cache de lecture a été vidé.');
     }

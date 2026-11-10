@@ -78,4 +78,15 @@ class AccountEventLogger
     {
         $this->log($account, 'app_token_regenerated', 'warning', "Clé régénérée pour le jeton « {$appName} ».", ['app' => $appName]);
     }
+
+    public function cacheCleared(EbpAccount $account, bool $global = false): void
+    {
+        $this->log(
+            $account,
+            'cache_cleared',
+            'info',
+            $global ? 'Cache de lecture vidé (purge globale).' : 'Cache de lecture du compte vidé.',
+            $global ? ['scope' => 'global'] : ['scope' => 'account'],
+        );
+    }
 }

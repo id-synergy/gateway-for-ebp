@@ -112,6 +112,33 @@ class AccountEventsTest extends TestCase
         ]);
     }
 
+    public function test_le_vidage_du_cache_est_journalise(): void
+    {
+        $account = EbpAccount::factory()->create();
+        $admin = $this->admin();
+
+        // Vidage du cache du compte.
+        $this->actingAs($admin)->post("/admin/comptes/{$account->id}/clear-cache")->assertRedirect();
+
+        $this->assertDatabaseHas('account_events', [
+            'ebp_account_id' => $account->id, 'type' => 'cache_cleared', 'level' => 'info',
+        ]);
+    }
+
+    public function test_la_purge_globale_du_cache_est_journalisee_sur_chaque_compte(): void
+    {
+        $a = EbpAccount::factory()->create();
+        $b = EbpAccount::factory()->create();
+
+        $this->actingAs($this->admin())->post('/admin/cache/clear')->assertRedirect();
+
+        foreach ([$a, $b] as $account) {
+            $this->assertDatabaseHas('account_events', [
+                'ebp_account_id' => $account->id, 'type' => 'cache_cleared',
+            ]);
+        }
+    }
+
     public function test_le_renouvellement_du_token_journalise_token_refreshed(): void
     {
         Http::fake([
