@@ -76,7 +76,7 @@ class FakeEbpFlowTest extends TestCase
             ->assertOk()->assertJsonPath('results.0.id', 'C0001');
 
         $this->getJson('/fake-ebp/gescom/api/v1/Folders/1001/Items/ItemsExtentedQuery')
-            ->assertOk()->assertJsonPath('results.0.code', 'ART001');
+            ->assertOk()->assertJsonPath('results.0.Id', 'ART001');
 
         $this->getJson('/fake-ebp/gescom/api/v1/Folders/1001/Documents/SaleDocument')
             ->assertOk()->assertJsonPath('results.0.number', 'FA-2026-001');

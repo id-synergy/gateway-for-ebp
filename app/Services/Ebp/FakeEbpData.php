@@ -54,14 +54,26 @@ class FakeEbpData
         ];
     }
 
-    /** GET .../Items... — articles simulés. */
+    /** GET .../Items... — articles simulés, au format réel de l'API EBP (champs Items). */
     public static function items(): array
     {
         return [
             'results' => [
-                ['code' => 'ART001', 'label' => 'Motoréducteur 0,75 kW', 'priceVatExcluded' => '420.0000000000000000000000000', 'stock' => 12],
-                ['code' => 'ART002', 'label' => 'Chaîne de transmission', 'priceVatExcluded' => '85.5000000000000000000000000', 'stock' => 48],
-                ['code' => 'ART003', 'label' => 'Variateur de fréquence', 'priceVatExcluded' => '640.0000000000000000000000000', 'stock' => 5],
+                [
+                    'Id' => 'ART001', 'Caption' => 'Motoréducteur 0,75 kW', 'DesComClear' => 'Motoréducteur 0,75 kW',
+                    'SalePriceVatExcluded' => '420.00000000', 'SalePriceVatIncluded' => '504.00000000',
+                    'BarCode' => '3660619000012', 'ShelfRef' => 'A-12', 'FamilyId' => 'FAR00001',
+                ],
+                [
+                    'Id' => 'ART002', 'Caption' => 'Chaîne de transmission', 'DesComClear' => 'Chaîne de transmission',
+                    'SalePriceVatExcluded' => '85.50000000', 'SalePriceVatIncluded' => '102.60000000',
+                    'BarCode' => '3660619000029', 'ShelfRef' => 'B-04', 'FamilyId' => 'FAR00002',
+                ],
+                [
+                    'Id' => 'ART003', 'Caption' => 'Variateur de fréquence', 'DesComClear' => 'Variateur de fréquence',
+                    'SalePriceVatExcluded' => '640.00000000', 'SalePriceVatIncluded' => '768.00000000',
+                    'BarCode' => '3660619000036', 'ShelfRef' => 'C-01', 'FamilyId' => 'FAR00001',
+                ],
             ],
             'paging' => ['offset' => 0, 'limit' => 100, 'total' => 3],
         ];
