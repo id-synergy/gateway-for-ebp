@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\OAuth;
 
 use App\Http\Controllers\Controller;
+use App\Mail\EbpAccountConnectedMail;
 use App\Models\EbpAccount;
 use App\Services\Accounts\AccountEventLogger;
+use App\Services\Alerts\AlertService;
 use App\Services\Ebp\EbpFolderDiscovery;
 use App\Services\Ebp\EbpTokenService;
 use Illuminate\Http\RedirectResponse;
@@ -24,6 +26,7 @@ class EbpOAuthController extends Controller
         protected EbpTokenService $tokens,
         protected EbpFolderDiscovery $folders,
         protected AccountEventLogger $events,
+        protected AlertService $alerts,
     ) {}
 
     /** GET /oauth/ebp/connect?account={id} */
@@ -104,7 +107,7 @@ class EbpOAuthController extends Controller
         [$code, $state] = $this->parseCallbackInput($raw);
 
         if ($code === '') {
-            return redirect($return)->with('error', "Impossible de trouver le code dans ce que vous avez collé.");
+            return redirect($return)->with('error', 'Impossible de trouver le code dans ce que vous avez collé.');
         }
 
         // Le portail a pu renvoyer une erreur dans l'URL collée (refus, etc.).
@@ -171,6 +174,22 @@ class EbpOAuthController extends Controller
             return redirect($return)->with('error', $this->explainExchangeError($e->getMessage()));
         }
 
+        // Confirmation par e-mail (connexion / reconnexion réussie). Purement informatif :
+        // un échec d'envoi ne doit pas compromettre la connexion elle-même.
+        try {
+            $this->alerts->send(
+                EbpAccountConnectedMail::ALERT_TYPE,
+                new EbpAccountConnectedMail($account->fresh(), $reconnection, $account->folders()->count()),
+                subjectRef: "ebp_account:{$account->id}",
+                context: ['account_id' => $account->id, 'reconnection' => $reconnection],
+            );
+        } catch (\Throwable $e) {
+            Log::warning('E-mail de confirmation de connexion EBP non envoyé', [
+                'account' => $account->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
+
         return redirect($return)->with('success', "Compte EBP « {$account->label} » connecté.");
     }
 
@@ -184,16 +203,11 @@ class EbpOAuthController extends Controller
         $r = strtolower($raw);
 
         return match (true) {
-            str_contains($r, 'invalid_grant')
-                => 'Code d\'autorisation invalide ou expiré. Le code EBP n\'est valable que quelques instants et à usage unique : relancez « Reconnecter » et collez le retour aussitôt.',
-            str_contains($r, 'redirect_uri') && (str_contains($r, 'mismatch') || str_contains($r, 'invalid'))
-                => 'Le redirect_uri ne correspond pas à celui autorisé chez EBP. Vérifiez qu\'il est identique au caractère près (mode de redirection du compte / EBP_LOCALHOST_REDIRECT).',
-            str_contains($r, 'invalid_client') || str_contains($r, 'unauthorized_client')
-                => 'ClientId ou ClientSecret EBP refusé. Vérifiez les identifiants du compte dans « Modifier ».',
-            str_contains($r, 'invalid_scope')
-                => 'Portées (scope) refusées par EBP. Vérifiez la configuration du scope (openid profile offline_access).',
-            default
-                => 'Connexion EBP échouée : '.$raw,
+            str_contains($r, 'invalid_grant') => 'Code d\'autorisation invalide ou expiré. Le code EBP n\'est valable que quelques instants et à usage unique : relancez « Reconnecter » et collez le retour aussitôt.',
+            str_contains($r, 'redirect_uri') && (str_contains($r, 'mismatch') || str_contains($r, 'invalid')) => 'Le redirect_uri ne correspond pas à celui autorisé chez EBP. Vérifiez qu\'il est identique au caractère près (mode de redirection du compte / EBP_LOCALHOST_REDIRECT).',
+            str_contains($r, 'invalid_client') || str_contains($r, 'unauthorized_client') => 'ClientId ou ClientSecret EBP refusé. Vérifiez les identifiants du compte dans « Modifier ».',
+            str_contains($r, 'invalid_scope') => 'Portées (scope) refusées par EBP. Vérifiez la configuration du scope (openid profile offline_access).',
+            default => 'Connexion EBP échouée : '.$raw,
         };
     }
 }
