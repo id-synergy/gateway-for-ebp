@@ -4,10 +4,15 @@ use App\Http\Controllers\Admin\AdminActionController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApiDocController;
 use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\HealthcheckController;
 use App\Http\Controllers\OAuth\EbpOAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect('/admin'));
+
+// Contrôle de santé pour la supervision (Uptime Kuma) : public = ok/ko,
+// détail par brique avec ?token=HEALTHCHECK_TOKEN.
+Route::get('/healthcheck', HealthcheckController::class)->name('healthcheck');
 
 // /login, /two-factor-challenge, /logout : fournis par Fortify (vues Inertia configurées).
 

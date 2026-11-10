@@ -27,6 +27,9 @@ return [
     'fake_portal' => env('APP_ENV') !== 'production'
         && filter_var(env('EBP_FAKE_PORTAL', false), FILTER_VALIDATE_BOOLEAN),
 
+    // Jeton pour obtenir le détail de /healthcheck (sinon, statut global seulement).
+    'healthcheck_token' => env('HEALTHCHECK_TOKEN'),
+
     // URLs de base de l'API EBP selon l'environnement ciblé par chaque compte.
     // 'demo' pointe sur le serveur EBP simulé interne (voir routes 'fake-ebp'), pour tester
     // tout le flux de la gateway sans identifiants EBP réels.
