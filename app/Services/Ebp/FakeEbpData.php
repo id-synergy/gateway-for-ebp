@@ -68,6 +68,11 @@ class FakeEbpData
         $all = self::itemsCatalog();
 
         $filtered = self::applyWhereCondition($all, (string) ($query['WhereCondition'] ?? ''));
+        $filtered = self::applyOrder(
+            $filtered,
+            (string) ($query['OrderByValue'] ?? ''),
+            strtolower((string) ($query['OrderByDirection'] ?? '')) === 'descending',
+        );
         $total = count($filtered);
 
         $offset = max(0, (int) ($query['Offset'] ?? 0));
@@ -178,6 +183,34 @@ class FakeEbpData
         }
 
         return array_values($items);
+    }
+
+    /**
+     * Trie les articles selon `OrderByValue` (nom de champ EBP) et le sens.
+     * Les champs de prix et de stock sont comparés numériquement, les autres en texte.
+     *
+     * @param  array<int,array<string,mixed>>  $items
+     * @return array<int,array<string,mixed>>
+     */
+    private static function applyOrder(array $items, string $field, bool $descending): array
+    {
+        $field = trim($field);
+        if ($field === '') {
+            return $items;
+        }
+
+        $numeric = in_array($field, ['SalePriceVatIncluded', 'SalePriceVatExcluded', 'RealStock'], true);
+
+        usort($items, function (array $a, array $b) use ($field, $numeric) {
+            $va = $a[$field] ?? null;
+            $vb = $b[$field] ?? null;
+
+            return $numeric
+                ? (float) $va <=> (float) $vb
+                : strcasecmp((string) $va, (string) $vb);
+        });
+
+        return $descending ? array_reverse($items) : $items;
     }
 
     /** Évalue une condition élémentaire sur un article. */
