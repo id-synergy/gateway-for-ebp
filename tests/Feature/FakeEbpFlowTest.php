@@ -28,6 +28,14 @@ class FakeEbpFlowTest extends TestCase
             ->assertJsonPath('folders.0.shortName', 'DEMO40');
     }
 
+    public function test_le_faux_portail_oauth_redirige_avec_code_et_state(): void
+    {
+        // Le faux /connect/authorize simule le portail EBP : consentement réussi ->
+        // redirection vers redirect_uri avec un code et le state conservé.
+        $this->get('/fake-ebp/connect/authorize?redirect_uri='.urlencode('http://localhost/oauth/ebp/callback').'&state=ABC123')
+            ->assertRedirect('http://localhost/oauth/ebp/callback?code=DEMO_CODE&state=ABC123');
+    }
+
     public function test_le_faux_serveur_simule_les_endpoints_metier(): void
     {
         $this->postJson('/fake-ebp/connect/token')

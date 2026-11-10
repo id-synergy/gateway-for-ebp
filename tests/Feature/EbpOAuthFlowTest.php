@@ -73,4 +73,62 @@ class EbpOAuthFlowTest extends TestCase
         $response->assertForbidden();
         $this->assertDatabaseCount('ebp_tokens', 0);
     }
+
+    public function test_callback_refuse_un_state_vide(): void
+    {
+        $account = EbpAccount::factory()->create();
+
+        // Un callback sans state (forgé) ne doit jamais passer, même si la session en a un.
+        $this->withSession(['ebp_oauth_state' => 'BON_STATE', 'ebp_oauth_account' => $account->id])
+            ->get('/oauth/ebp/callback?code=AUTH_CODE')
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('ebp_tokens', 0);
+    }
+
+    public function test_callback_sans_code_affiche_une_erreur_sans_rien_enregistrer(): void
+    {
+        // L'utilisateur a refusé le consentement / EBP revient sans code.
+        $account = EbpAccount::factory()->create();
+
+        $this->withSession(['ebp_oauth_state' => 'S', 'ebp_oauth_account' => $account->id])
+            ->get('/oauth/ebp/callback?state=S')
+            ->assertRedirect('/admin/comptes')
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('ebp_tokens', 0);
+        $this->assertNotSame('connected', $account->fresh()->status);
+    }
+
+    public function test_callback_echange_en_echec_affiche_une_erreur(): void
+    {
+        // EBP refuse le code (expiré / déjà utilisé) : 400 invalid_grant.
+        Http::fake([config('ebp.token_url') => Http::response(['error' => 'invalid_grant'], 400)]);
+
+        $account = EbpAccount::factory()->create();
+
+        $this->withSession(['ebp_oauth_state' => 'S', 'ebp_oauth_account' => $account->id])
+            ->get('/oauth/ebp/callback?code=CODE_EXPIRE&state=S')
+            ->assertRedirect('/admin/comptes')
+            ->assertSessionHas('error');
+
+        // Aucun token stocké, le compte n'est pas marqué connecté.
+        $this->assertDatabaseCount('ebp_tokens', 0);
+        $this->assertNotSame('connected', $account->fresh()->status);
+    }
+
+    public function test_callback_sur_compte_inexistant_404(): void
+    {
+        $this->withSession(['ebp_oauth_state' => 'S', 'ebp_oauth_account' => 999999])
+            ->get('/oauth/ebp/callback?code=CODE&state=S')
+            ->assertNotFound();
+    }
+
+    public function test_connect_exige_un_admin_connecte(): void
+    {
+        $account = EbpAccount::factory()->create();
+
+        // Sans authentification admin, on ne peut pas démarrer une connexion OAuth.
+        $this->get("/oauth/ebp/connect?account={$account->id}")->assertRedirect('/login');
+    }
 }
