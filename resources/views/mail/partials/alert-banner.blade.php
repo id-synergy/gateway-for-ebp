@@ -5,6 +5,7 @@
         'danger'  => ['bg' => '#FBECEC', 'bar' => '#E24B4A', 'text' => '#8A2A29', 'icon' => '!'],
         'warning' => ['bg' => '#FDF4E0', 'bar' => '#FAC775', 'text' => '#633806', 'icon' => '△'],
         'info'    => ['bg' => '#E8EEF6', 'bar' => '#0046FE', 'text' => '#002C52', 'icon' => 'i'],
+        'success' => ['bg' => '#E7F4EC', 'bar' => '#2E9E5B', 'text' => '#1B5E35', 'icon' => '✓'],
     ];
     $s = $styles[$level] ?? $styles['info'];
 @endphp

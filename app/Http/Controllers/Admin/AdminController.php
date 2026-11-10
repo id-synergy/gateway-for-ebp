@@ -92,6 +92,7 @@ class AdminController extends Controller
             'token_refresh_failed' => 'Échec renouvellement token',
             'logs_purge_failed' => 'Échec purge des logs',
             'account_expiring' => 'Compte bientôt expiré',
+            'account_connected' => 'Compte EBP connecté',
             'generic_incident' => 'Incident générique',
         ];
 
@@ -214,11 +215,12 @@ class AdminController extends Controller
 
     public function admins(): Response
     {
-        $types = ['token_refresh_failed', 'logs_purge_failed', 'account_expiring', 'generic_incident'];
+        $types = ['token_refresh_failed', 'logs_purge_failed', 'account_expiring', 'account_connected', 'generic_incident'];
         $labels = [
             'token_refresh_failed' => 'Échec renouvellement token',
             'logs_purge_failed' => 'Échec purge des logs',
             'account_expiring' => 'Compte bientôt expiré',
+            'account_connected' => 'Compte EBP connecté',
             'generic_incident' => 'Incident générique',
         ];
 
