@@ -27,6 +27,9 @@ const form = useForm({ name: '', ebp_account_id: props.accounts[0]?.id ?? null, 
 
 const currentFolders = computed(() => props.accounts.find((a) => a.id === form.ebp_account_id)?.folders ?? []);
 
+const activeTokens = computed(() => props.tokens.filter((t) => t.active));
+const revokedTokens = computed(() => props.tokens.filter((t) => !t.active));
+
 function submit() {
     form.post('/admin/jetons', { onSuccess: () => { form.reset(); showForm.value = false; } });
 }
@@ -140,42 +143,78 @@ function regenerate(token) {
             </div>
         </CutCard>
 
-        <CutCard>
-            <EmptyState v-if="!tokens.length" :icon="KeyRound" title="Aucun jeton d'application"
+        <!-- Aucun jeton -->
+        <CutCard v-if="!tokens.length">
+            <EmptyState :icon="KeyRound" title="Aucun jeton d'application"
                 text="Créez un jeton pour qu'une application (impression de tickets, pilotage…) puisse accéder à EBP via la gateway.">
                 <Button size="lg" @click="showForm = true"><Plus class="size-5" /> Créer un jeton</Button>
             </EmptyState>
-            <div v-else class="p-5">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Application</TableHead>
-                            <TableHead>Compte EBP</TableHead>
-                            <TableHead>Dossier par défaut</TableHead>
-                            <TableHead>Dernière utilisation</TableHead>
-                            <TableHead>État</TableHead>
-                            <TableHead class="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow v-for="t in tokens" :key="t.id">
-                            <TableCell class="font-medium">{{ t.name }}</TableCell>
-                            <TableCell class="text-muted-foreground">{{ t.account }}</TableCell>
-                            <TableCell class="text-muted-foreground">{{ t.folder }}</TableCell>
-                            <TableCell class="text-muted-foreground">{{ t.lastUsed }}</TableCell>
-                            <TableCell><Badge :variant="t.active ? 'default' : 'secondary'">{{ t.active ? 'Actif' : 'Révoqué' }}</Badge></TableCell>
-                            <TableCell class="text-right">
-                                <div class="flex items-center justify-end gap-1">
-                                    <Button variant="ghost" size="sm" @click="regenerate(t)">
-                                        <RefreshCw class="size-3.5" /> Régénérer la clé
-                                    </Button>
-                                    <Button v-if="t.active" variant="ghost" size="sm" class="text-destructive" @click="revoke(t.id)">Révoquer</Button>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </div>
         </CutCard>
+
+        <template v-else>
+            <!-- Jetons actifs. Titre seulement s'il y a aussi des jetons révoqués. -->
+            <CutCard :class="revokedTokens.length ? 'mb-4' : ''">
+                <div class="p-5">
+                    <h3 v-if="revokedTokens.length" class="text-base font-medium text-[#002C52] mb-3">Jetons actifs</h3>
+                    <p v-if="!activeTokens.length" class="text-sm text-muted-foreground">Aucun jeton actif.</p>
+                    <Table v-else>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Application</TableHead>
+                                <TableHead>Compte EBP</TableHead>
+                                <TableHead>Dossier par défaut</TableHead>
+                                <TableHead>Dernière utilisation</TableHead>
+                                <TableHead>État</TableHead>
+                                <TableHead class="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow v-for="t in activeTokens" :key="t.id">
+                                <TableCell class="font-medium">{{ t.name }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ t.account }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ t.folder }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ t.lastUsed }}</TableCell>
+                                <TableCell><Badge variant="default">Actif</Badge></TableCell>
+                                <TableCell class="text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <Button variant="ghost" size="sm" @click="regenerate(t)">
+                                            <RefreshCw class="size-3.5" /> Régénérer la clé
+                                        </Button>
+                                        <Button variant="ghost" size="sm" class="text-destructive" @click="revoke(t.id)">Révoquer</Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </div>
+            </CutCard>
+
+            <!-- Jetons révoqués : affichés seulement s'il y en a, sans action (révocation définitive). -->
+            <CutCard v-if="revokedTokens.length">
+                <div class="p-5">
+                    <h3 class="text-base font-medium text-[#002C52] mb-3">Jetons révoqués</h3>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Application</TableHead>
+                                <TableHead>Compte EBP</TableHead>
+                                <TableHead>Dossier par défaut</TableHead>
+                                <TableHead>Dernière utilisation</TableHead>
+                                <TableHead>État</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow v-for="t in revokedTokens" :key="t.id">
+                                <TableCell class="font-medium text-muted-foreground">{{ t.name }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ t.account }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ t.folder }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ t.lastUsed }}</TableCell>
+                                <TableCell><Badge variant="secondary">Révoqué</Badge></TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </div>
+            </CutCard>
+        </template>
     </AdminLayout>
 </template>

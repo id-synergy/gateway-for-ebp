@@ -48,6 +48,11 @@ class AdminActionController extends Controller
 
     public function regenerateToken(AppToken $token): RedirectResponse
     {
+        // Une clé révoquée ne se régénère pas : la révocation est définitive, on recrée un jeton.
+        if (! $token->is_active) {
+            return back()->with('error', "Ce jeton est révoqué : créez-en un nouveau plutôt que de le régénérer.");
+        }
+
         $plain = $this->tokens->regenerate($token);
 
         // Le nouveau jeton en clair n'est montré qu'une fois, via le flash.

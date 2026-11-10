@@ -55,8 +55,11 @@ class AppTokenService
     }
 
     /**
-     * Régénère la clé d'un jeton EXISTANT : nouvelle valeur, même app/compte/dossier.
-     * L'ancienne clé cesse immédiatement de fonctionner (irréversible). Réactive le jeton.
+     * Régénère la clé d'un jeton ACTIF : nouvelle valeur, même app/compte/dossier.
+     * L'ancienne clé cesse immédiatement de fonctionner (irréversible).
+     *
+     * Ne réactive PAS un jeton révoqué : une révocation est volontaire et définitive,
+     * on recrée un jeton si l'app doit retrouver l'accès.
      *
      * @return string Le nouveau jeton en clair (à montrer une seule fois).
      */
@@ -66,8 +69,6 @@ class AppTokenService
 
         $token->update([
             'token_hash' => $this->hash($plain),
-            'is_active' => true,
-            'revoked_at' => null,
             'last_used_at' => null,
         ]);
 
