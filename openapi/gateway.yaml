@@ -48,6 +48,7 @@ paths:
                     type: boolean
                   service:
                     type: string
+      operationId: gateway-ping
   /api/v1/whoami:
     get:
       tags:
@@ -80,6 +81,7 @@ paths:
                         type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
+      operationId: gateway-whoami
   /api/v1/batch:
     post:
       tags:
@@ -113,6 +115,7 @@ paths:
       responses:
         '202':
           $ref: '#/components/responses/JobAccepted'
+      operationId: gateway-batch
   /api/v1/compose:
     post:
       tags:
@@ -158,6 +161,7 @@ paths:
           $ref: '#/components/responses/JobAccepted'
         '422':
           $ref: '#/components/responses/BadRequest'
+      operationId: gateway-compose
   /api/v1/jobs:
     get:
       tags:
@@ -213,6 +217,7 @@ paths:
                         type: integer
         '401':
           $ref: '#/components/responses/Unauthorized'
+      operationId: gateway-jobs-list
   /api/v1/jobs/{jobId}:
     get:
       tags:
@@ -234,6 +239,7 @@ paths:
                 $ref: '#/components/schemas/JobStatus'
         '404':
           $ref: '#/components/responses/NotFound'
+      operationId: gateway-job-status
   /api/v1/jobs/{jobId}/result:
     get:
       tags:
@@ -274,6 +280,7 @@ paths:
           description: Job non terminé
         '404':
           $ref: '#/components/responses/NotFound'
+      operationId: gateway-job-result
   /gescom/api/v1/Folders:
     get:
       summary: Obtenir les dossiers de gestion
