@@ -65,6 +65,38 @@ Deux spécifications OpenAPI accompagnent le projet :
   la gateway s'appuie dessus mais ne l'expose pas telle quelle. Document reconstitué à partir de la
   documentation et du portail officiels d'EBP — il peut évoluer côté EBP.
 
+## Développement avec Docker (Laravel Sail)
+
+Un environnement complet **PHP + MySQL + Redis** est fourni via Laravel Sail
+(`compose.yaml`). Le nom du projet Docker se règle dans `.env` (`COMPOSE_PROJECT_NAME`).
+
+```bash
+# démarrer (app + MySQL + Redis)
+./vendor/bin/sail up -d
+
+# préparer la base
+./vendor/bin/sail artisan migrate --seed
+
+# file d'attente supervisée (Redis)
+./vendor/bin/sail artisan horizon
+```
+
+L'app écoute sur `APP_PORT` (`.env`), le dashboard Horizon sur `/horizon` (accès admin).
+
+### Tests
+
+- **Par défaut : SQLite en mémoire** (rapide, pour la CI et le dev local) :
+  ```bash
+  php artisan test
+  ```
+- **Sur MySQL** (dans le conteneur Sail, pour vérifier la compatibilité SQL réelle) :
+  ```bash
+  ./vendor/bin/sail artisan test --configuration=phpunit.mysql.xml
+  ```
+
+La suite couvre le proxy (7 modules), le cache, l'authentification, et toute la partie
+asynchrone (jobs, batch, compose) — exécutée en synchrone contre un mock EBP intégré.
+
 ## Licence
 
 MIT (à la publication).
