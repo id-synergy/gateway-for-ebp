@@ -240,6 +240,12 @@ class AdminController extends Controller
                     $u->id => (bool) optional($u->notificationPreferences->firstWhere('alert_type', $type))->enabled,
                 ]),
             ]),
+            'invitations' => \App\Models\Invitation::pending()->latest()->get()->map(fn ($i) => [
+                'id' => $i->id,
+                'name' => $i->name,
+                'email' => $i->email,
+                'expiresIn' => $i->expires_at->diffForHumans(),
+            ]),
         ]);
     }
 

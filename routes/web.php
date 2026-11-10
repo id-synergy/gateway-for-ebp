@@ -3,12 +3,18 @@
 use App\Http\Controllers\Admin\AdminActionController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApiDocController;
+use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\HealthcheckController;
 use App\Http\Controllers\OAuth\EbpOAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect('/admin'));
+
+// Acceptation d'une invitation (public) : création de compte via un lien à durée limitée.
+Route::get('/invitation/{token}', [AcceptInvitationController::class, 'show'])->name('invitation.show');
+Route::post('/invitation/{token}', [AcceptInvitationController::class, 'store'])->name('invitation.store');
 
 // Contrôle de santé pour la supervision (Uptime Kuma) : public = ok/ko,
 // détail par brique avec ?token=HEALTHCHECK_TOKEN.
@@ -71,6 +77,8 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::delete('/ip/{ip}', [AdminActionController::class, 'destroyIp'])->name('admin.ip.destroy');
     Route::post('/admins', [AdminActionController::class, 'storeAdmin'])->name('admin.admins.store');
     Route::patch('/admins/{user}/toggle', [AdminActionController::class, 'toggleAdmin'])->name('admin.admins.toggle');
+    Route::post('/invitations', [InvitationController::class, 'store'])->name('admin.invitations.store');
+    Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy'])->name('admin.invitations.destroy');
     Route::post('/preferences', [AdminActionController::class, 'togglePreference'])->name('admin.preferences.toggle');
     Route::post('/comptes/{account}/clear-cache', [AdminActionController::class, 'clearAccountCache'])->name('admin.comptes.clear-cache');
     Route::post('/cache/clear', [AdminActionController::class, 'clearAllCache'])->name('admin.cache.clear');

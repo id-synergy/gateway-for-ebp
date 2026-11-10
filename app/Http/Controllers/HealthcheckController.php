@@ -36,15 +36,15 @@ class HealthcheckController extends Controller
         $token = config('ebp.healthcheck_token');
         $authorized = $token && hash_equals($token, (string) $request->query('token'));
 
-        if (! $authorized) {
-            return response()->json(['status' => $healthy ? 'ok' : 'down'], $status);
-        }
+        $payload = $authorized
+            ? ['status' => $healthy ? 'ok' : 'down', 'checks' => $checks, 'time' => now()->toIso8601String()]
+            : ['status' => $healthy ? 'ok' : 'down'];
 
-        return response()->json([
-            'status' => $healthy ? 'ok' : 'down',
-            'checks' => $checks,
-            'time' => now()->toIso8601String(),
-        ], $status);
+        // Jamais mis en cache : la supervision doit toujours mesurer l'état réel (et le
+        // navigateur ne doit pas resservir une ancienne réponse avec/sans token).
+        return response()->json($payload, $status)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->header('Pragma', 'no-cache');
     }
 
     private function checkDatabase(): array
