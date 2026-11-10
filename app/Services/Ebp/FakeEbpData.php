@@ -87,10 +87,15 @@ class FakeEbpData
         ];
     }
 
-    /** Catalogue factice complet (avant filtrage/pagination). */
+    /**
+     * Catalogue factice complet (avant filtrage/pagination).
+     * Trois articles « vedettes » avec des EAN connus (pour tester le scan), puis un lot
+     * généré d'articles variés (familles, prix, stock, état) pour démontrer la pagination
+     * et les filtres sur un volume réaliste.
+     */
     private static function itemsCatalog(): array
     {
-        return [
+        $items = [
             [
                 'Id' => 'ART001', 'Caption' => 'Motoréducteur 0,75 kW', 'DesComClear' => 'Motoréducteur 0,75 kW',
                 'SalePriceVatExcluded' => '420.00000000', 'SalePriceVatIncluded' => '504.00000000',
@@ -110,6 +115,40 @@ class FakeEbpData
                 'SubFamilyId' => 'SF001', 'RealStock' => '12.00000000', 'ActiveState' => 1,
             ],
         ];
+
+        // Lot généré, déterministe (pas d'aléa : liste stable entre deux appels).
+        $labels = [
+            'Roulement à billes', 'Courroie trapézoïdale', 'Pignon acier', 'Vérin pneumatique',
+            'Capteur inductif', 'Moteur asynchrone', 'Réducteur à vis', 'Accouplement élastique',
+            'Galet tendeur', 'Boîtier de dérivation', 'Contacteur tripolaire', 'Disjoncteur moteur',
+            'Câble souple', 'Presse-étoupe', 'Joint torique', 'Vis sans fin', 'Poulie fonte',
+            'Chaîne à rouleaux',
+        ];
+        $families = ['FAR00001', 'FAR00002', 'FAR00003', 'FAR00004'];
+        $subFamilies = ['SF001', 'SF002', 'SF003'];
+
+        for ($i = 4; $i <= 60; $i++) {
+            $label = $labels[($i - 4) % count($labels)];
+            $priceExcl = 10 + (($i * 37) % 900);           // 10 → ~909 €, déterministe
+            $priceIncl = round($priceExcl * 1.2, 2);
+            $stock = (($i * 7) % 5 === 0) ? 0 : (($i * 3) % 40); // ~1 sur 5 en rupture
+            $active = (($i % 11) === 0) ? 1 : 0;                 // ~1 sur 11 inactif
+            $items[] = [
+                'Id' => sprintf('ART%03d', $i),
+                'Caption' => sprintf('%s réf. %03d', $label, $i),
+                'DesComClear' => sprintf('%s réf. %03d', $label, $i),
+                'SalePriceVatExcluded' => sprintf('%.8f', $priceExcl),
+                'SalePriceVatIncluded' => sprintf('%.8f', $priceIncl),
+                'BarCode' => sprintf('36606190%05d', $i),
+                'ShelfRef' => sprintf('%s-%02d', chr(65 + ($i % 6)), $i % 20),
+                'FamilyId' => $families[$i % count($families)],
+                'SubFamilyId' => $subFamilies[$i % count($subFamilies)],
+                'RealStock' => sprintf('%.8f', $stock),
+                'ActiveState' => $active,
+            ];
+        }
+
+        return $items;
     }
 
     /**
@@ -144,8 +183,8 @@ class FakeEbpData
     /** Évalue une condition élémentaire sur un article. */
     private static function matchesCondition(array $item, string $cond): bool
     {
-        // FamilyId eq 'FAR00001' / SubFamilyId eq 'SF001'
-        if (preg_match("/^(FamilyId|SubFamilyId)\s+eq\s+'(.*)'$/i", $cond, $m)) {
+        // FamilyId eq 'FAR00001' / SubFamilyId eq 'SF001' / BarCode eq '366...'
+        if (preg_match("/^(FamilyId|SubFamilyId|BarCode)\s+eq\s+'(.*)'$/i", $cond, $m)) {
             return ($item[$m[1]] ?? '') === self::unescape($m[2]);
         }
 
