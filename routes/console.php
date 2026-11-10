@@ -20,3 +20,10 @@ Schedule::job(new RefreshEbpTokens)->everySixHours();
 
 // Purge des logs et résultats de jobs au-delà de la rétention (360 j).
 Schedule::command('ebp:logs:purge')->dailyAt('03:30');
+
+// Purge des codes d'appairage consommés ou expirés (court-vivants, 10 min).
+Schedule::call(function () {
+    \App\Models\PairingCode::where('expires_at', '<', now())
+        ->orWhereNotNull('consumed_at')
+        ->delete();
+})->hourly();

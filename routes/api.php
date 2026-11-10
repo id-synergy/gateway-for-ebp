@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ComposeController;
 use App\Http\Controllers\Api\JobsController;
+use App\Http\Controllers\Api\PairingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,10 @@ Route::prefix('v1')->middleware('throttle:gateway')->group(function () {
         return response(file_get_contents(base_path('openapi/gateway.yaml')), 200)
             ->header('Content-Type', 'application/yaml');
     });
+
+    // Appairage : l'app échange son code (scanné dans le QR) contre le vrai jeton.
+    // Public mais fortement bridé (anti-bruteforce) et à usage unique côté code.
+    Route::post('/pairing/claim', [PairingController::class, 'claim'])->middleware('throttle:10,1');
 
     Route::middleware('app.token')->group(function () {
 

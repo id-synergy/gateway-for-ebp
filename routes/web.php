@@ -73,6 +73,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('/jetons', [AdminActionController::class, 'storeToken'])->name('admin.tokens.store');
     Route::delete('/jetons/{token}', [AdminActionController::class, 'revokeToken'])->name('admin.tokens.revoke');
     Route::post('/jetons/{token}/regenerate', [AdminActionController::class, 'regenerateToken'])->name('admin.tokens.regenerate');
+    Route::post('/jetons/{token}/pairing', [\App\Http\Controllers\Admin\PairingController::class, 'create'])->name('admin.tokens.pairing');
     Route::post('/ip', [AdminActionController::class, 'storeIp'])->name('admin.ip.store');
     Route::delete('/ip/{ip}', [AdminActionController::class, 'destroyIp'])->name('admin.ip.destroy');
     Route::post('/admins', [AdminActionController::class, 'storeAdmin'])->name('admin.admins.store');
