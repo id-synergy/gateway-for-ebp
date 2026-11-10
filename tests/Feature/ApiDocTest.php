@@ -34,4 +34,26 @@ class ApiDocTest extends TestCase
             ->assertHeader('Content-Type', 'application/yaml')
             ->assertSee('Gateway API EBP');
     }
+
+    public function test_le_swagger_gateway_se_telecharge(): void
+    {
+        $this->actingAs(User::factory()->create(['is_active' => true]))
+            ->get('/admin/api/download/gateway')
+            ->assertOk()
+            ->assertDownload('gateway-openapi.yaml');
+    }
+
+    public function test_le_swagger_ebp_de_reference_se_telecharge(): void
+    {
+        $this->actingAs(User::factory()->create(['is_active' => true]))
+            ->get('/admin/api/download/ebp')
+            ->assertOk()
+            ->assertDownload('ebp-api-reference.openapi.yaml');
+    }
+
+    public function test_les_telechargements_exigent_une_connexion(): void
+    {
+        $this->get('/admin/api/download/gateway')->assertRedirect('/login');
+        $this->get('/admin/api/download/ebp')->assertRedirect('/login');
+    }
 }

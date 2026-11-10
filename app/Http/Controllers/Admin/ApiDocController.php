@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Documentation de l'API de la gateway, à destination des apps clientes.
@@ -22,6 +23,22 @@ class ApiDocController extends Controller
             'baseUrl' => rtrim(url('/'), '/'),
             'groups' => $this->endpointGroups(),
             'proxyPrefixes' => (array) config('ebp.gateway.proxy.allowed_prefixes', []),
+        ]);
+    }
+
+    /** Télécharge le Swagger de LA GATEWAY (ping, whoami, jobs, batch, compose + modules relayés). */
+    public function downloadGateway(): BinaryFileResponse
+    {
+        return response()->download(base_path('openapi/gateway.yaml'), 'gateway-openapi.yaml', [
+            'Content-Type' => 'application/yaml',
+        ]);
+    }
+
+    /** Télécharge le Swagger de référence de l'API EBP (doc officielle consolidée). */
+    public function downloadEbpReference(): BinaryFileResponse
+    {
+        return response()->download(base_path('docs/ebp-api-reference.openapi.yaml'), 'ebp-api-reference.openapi.yaml', [
+            'Content-Type' => 'application/yaml',
         ]);
     }
 

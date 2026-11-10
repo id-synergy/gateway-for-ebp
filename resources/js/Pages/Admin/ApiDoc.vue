@@ -3,7 +3,7 @@ import { ref, onMounted, nextTick } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, KeyRound, Server, Copy, Check } from 'lucide-vue-next';
+import { BookOpen, KeyRound, Server, Copy, Check, Download } from 'lucide-vue-next';
 
 const props = defineProps({
     openapiUrl: { type: String, required: true },
@@ -69,8 +69,8 @@ onMounted(() => {
     <AdminLayout current="api">
         <template #title>API &amp; documentation</template>
 
-        <!-- Onglets -->
-        <div class="flex items-center gap-2 mb-4">
+        <!-- Onglets + téléchargements -->
+        <div class="flex items-center gap-2 mb-4 flex-wrap">
             <button
                 type="button" @click="tab = 'guide'"
                 class="px-4 py-2 rounded-full text-sm font-medium transition-colors"
@@ -85,6 +85,24 @@ onMounted(() => {
             >
                 <Server class="size-4 inline -mt-0.5 mr-1" /> Explorateur (Swagger)
             </button>
+
+            <!-- Téléchargement des spécifications OpenAPI -->
+            <div class="ml-auto flex items-center gap-2">
+                <a
+                    href="/admin/api/download/gateway"
+                    class="px-3 py-2 rounded-full text-sm font-medium bg-white border border-[#E4DFCE] text-[#002C52] hover:border-primary transition-colors inline-flex items-center gap-1.5"
+                    title="Swagger de la gateway (ping, whoami, jobs, batch, compose + modules relayés)"
+                >
+                    <Download class="size-4" /> Swagger gateway
+                </a>
+                <a
+                    href="/admin/api/download/ebp"
+                    class="px-3 py-2 rounded-full text-sm font-medium bg-white border border-[#E4DFCE] text-[#002C52] hover:border-primary transition-colors inline-flex items-center gap-1.5"
+                    title="Swagger de référence de l'API EBP (doc officielle consolidée)"
+                >
+                    <Download class="size-4" /> Swagger EBP
+                </a>
+            </div>
         </div>
 
         <!-- GUIDE -->

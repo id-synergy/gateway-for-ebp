@@ -54,6 +54,8 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::get('/jobs/{job:public_id}', [AdminController::class, 'job'])->name('admin.jobs.show');
     Route::get('/supervision', [AdminController::class, 'supervision'])->name('admin.supervision');
     Route::get('/api', [ApiDocController::class, 'index'])->name('admin.api');
+    Route::get('/api/download/gateway', [ApiDocController::class, 'downloadGateway'])->name('admin.api.download.gateway');
+    Route::get('/api/download/ebp', [ApiDocController::class, 'downloadEbpReference'])->name('admin.api.download.ebp');
     Route::get('/profil', [ProfileController::class, 'show'])->name('admin.profile');
 
     // Actions.
