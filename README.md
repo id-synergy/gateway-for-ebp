@@ -108,6 +108,35 @@ L'app écoute sur `APP_PORT` (`.env`). Le dashboard Horizon est sur `/horizon`, 
 
 ---
 
+## 🐳 Déploiement avec Docker (production)
+
+Stack autonome **app + MySQL + Redis + Horizon**, prête à forker et lancer. Image multi-stage (Composer `--no-dev`, build front avec **Node 22**), nginx + php-fpm, migrations et mise en cache au premier démarrage.
+
+> Distincte de l'environnement de dev Sail (`compose.yaml`) : ici c'est [`compose.prod.yaml`](compose.prod.yaml).
+
+```bash
+# 1. configurer l'environnement (APP_KEY générée au 1er boot, à laisser vide)
+cp .env.docker.example .env
+#    éditer au minimum : DB_PASSWORD, APP_URL
+
+# 2. construire et démarrer (app, horizon, mysql, redis)
+docker compose -f compose.prod.yaml up -d --build
+
+# 3. créer le premier administrateur du back-office
+docker compose -f compose.prod.yaml exec app php artisan gateway:create-admin
+```
+
+L'app écoute en **HTTP sur `127.0.0.1:8080`** : placez votre reverse-proxy TLS (Traefik, nginx, Caddy…) devant. Vérifiez la santé sur `GET /healthcheck` (200 `{"status":"ok"}`), détail complet avec `?token=<HEALTHCHECK_TOKEN>`.
+
+**À savoir :**
+
+- **`APP_KEY`** chiffre les secrets EBP en base. Elle est générée au 1er démarrage et écrite dans votre `.env` (monté dans le conteneur). **Sauvegardez ce `.env`** : perdre la clé rend les secrets EBP illisibles.
+- **Persistance** : volumes `db-data` (MySQL), `redis-data` (Redis), `app-storage` (logs d'appels EBP). Un `down`/`up` les conserve ; `down -v` les efface.
+- **Reverse-proxy** : transmettez `X-Forwarded-Proto`. Pour que Laravel génère des URLs `https://`, configurez les [trusted proxies](https://laravel.com/docs/requests#configuring-trusted-proxies) selon votre proxy.
+- **Mises à jour** : `git pull && docker compose -f compose.prod.yaml up -d --build` — les migrations s'appliquent au redémarrage, Horizon reprend le nouveau code.
+
+---
+
 ## 🔗 Appeler la gateway
 
 Les applications appellent la gateway, **pas EBP directement**. Elles portent leur **jeton d'app** en Bearer ; la gateway résout le compte EBP et le dossier.
