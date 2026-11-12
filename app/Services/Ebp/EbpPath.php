@@ -42,6 +42,26 @@ class EbpPath
         return $rest !== '' && $rest !== 'Folders';
     }
 
+    /**
+     * Applique les réécritures de compatibilité au chemin avant relai vers EBP.
+     *
+     * L'API EBP expose certains endpoints sous une orthographe qui ne correspond pas à sa
+     * propre spec (ex. « ItemsExtentedQuery » au lieu de « ItemsExtendedQuery ») : l'URL
+     * documentée renvoie alors un 404. On corrige ici vers ce qu'EBP attend réellement, à
+     * partir de la table config ebp.gateway.proxy.path_rewrites {motif regex => remplacement}.
+     */
+    public static function applyRewrites(string $path): string
+    {
+        foreach ((array) config('ebp.gateway.proxy.path_rewrites', []) as $pattern => $replacement) {
+            $rewritten = preg_replace($pattern, $replacement, $path);
+            if ($rewritten !== null) {
+                $path = $rewritten;
+            }
+        }
+
+        return $path;
+    }
+
     /** Le module (préfixe) place-t-il le FolderId dans l'URL (modèle …/Folders/{id}/…) ? */
     public static function usesFolderUrl(string $prefix): bool
     {

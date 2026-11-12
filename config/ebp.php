@@ -115,6 +115,20 @@ return [
                     'maintenance/api/v1',
                 ])))
             ))),
+
+            // Réécritures de compatibilité appliquées au chemin AVANT relai vers EBP.
+            // L'API EBP expose certains endpoints sous une orthographe fautive qui ne
+            // correspond pas à sa propre spec OpenAPI : l'URL « correcte » renvoie alors un
+            // 404 "Resource not found". On accepte l'orthographe documentée côté apps clientes
+            // et on la corrige ici vers ce qu'EBP attend réellement. Table {motif regex => remplacement}
+            // (preg_replace, appliqué dans l'ordre). Garder ces contournements documentés et datés :
+            // à retirer si EBP corrige son API.
+            'path_rewrites' => [
+                // Articles : EBP attend « ItemsExtentedQuery » (faute de frappe, un T),
+                // alors que sa spec et le bon anglais écrivent « ItemsExtendedQuery ».
+                // Vérifié en production le 2026-11-12 (D => 404, T => 200).
+                '#/Items/ItemsExtendedQuery#' => '/Items/ItemsExtentedQuery',
+            ],
         ],
     ],
 
