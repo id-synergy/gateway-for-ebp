@@ -9,6 +9,7 @@ use App\Models\EbpFolder;
 use App\Services\Ebp\EbpClient;
 use App\Services\Ebp\EbpPath;
 use App\Services\Ebp\GatewayCache;
+use App\Services\Ebp\WhereConditionTranslator;
 use App\Services\Jobs\GatewayJobService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class EbpProxyController extends Controller
         protected EbpClient $client,
         protected GatewayJobService $jobs,
         protected GatewayCache $cache,
+        protected WhereConditionTranslator $whereTranslator,
     ) {}
 
     /** Point d'entrée unique : attrape tout chemin et le relaie vers EBP. */
@@ -55,7 +57,7 @@ class EbpProxyController extends Controller
         // Réécritures de compatibilité (orthographe fautive côté EBP) avant tout le reste,
         // pour que cache, journalisation et relai partagent le chemin réellement appelé.
         $endpoint = EbpPath::applyRewrites($this->withFolder($path, $prefix, $folder));
-        $query = $this->forwardableQuery($request);
+        $query = $this->translateWhereCondition($this->forwardableQuery($request));
         $isRead = $method === 'GET';
 
         // 1. Cache (lecture seule, compte l'autorise, et non contourné).
@@ -190,6 +192,23 @@ class EbpProxyController extends Controller
     protected function forwardableQuery(Request $request): array
     {
         return $request->except(['folderId', 'noCache']);
+    }
+
+    /**
+     * Traduit la valeur `WhereCondition` (OData → YAML EBP) avant tout le reste, pour que cache,
+     * journalisation et relai partagent la valeur réellement envoyée à EBP. Le YAML déjà formaté
+     * est relayé tel quel ; une valeur OData non reconnue est laissée inchangée (cf. le service).
+     *
+     * @param  array<string,mixed>  $query
+     * @return array<string,mixed>
+     */
+    protected function translateWhereCondition(array $query): array
+    {
+        if (isset($query['WhereCondition']) && is_string($query['WhereCondition'])) {
+            $query['WhereCondition'] = $this->whereTranslator->translate($query['WhereCondition']);
+        }
+
+        return $query;
     }
 
     /** Cache contourné par ?noCache=1 ou l'en-tête Cache-Control: no-cache. */
