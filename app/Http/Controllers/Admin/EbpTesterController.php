@@ -9,7 +9,6 @@ use App\Models\EbpFolder;
 use App\Models\RequestLog;
 use App\Services\Ebp\EbpClient;
 use App\Services\Ebp\EbpEndpointCatalog;
-use App\Services\Ebp\EbpPath;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -129,8 +128,6 @@ class EbpTesterController extends Controller
             'query' => 'nullable|array',
             'body' => 'nullable',
             'confirmed' => 'nullable|boolean',
-            // Endpoint brut : désactive les réécritures de compatibilité EBP (orthographe, etc.).
-            'raw' => 'nullable|boolean',
         ]);
 
         $method = strtoupper($data['method']);
@@ -153,25 +150,17 @@ class EbpTesterController extends Controller
                 ->first();
         }
 
-        $typed = ltrim(trim($data['endpoint']), '/');
+        $endpoint = ltrim(trim($data['endpoint']), '/');
         $query = $this->normalizeQuery($data['query'] ?? []);
         $body = $this->decodeBody($method, $data['body'] ?? null);
 
-        // Réécritures de compatibilité EBP (ex. ItemsExtendedQuery -> ItemsExtentedQuery),
-        // appliquées comme pour une vraie app, sauf si l'utilisateur demande l'endpoint brut.
-        $raw = (bool) ($data['raw'] ?? false);
-        $endpoint = $raw ? $typed : ltrim(EbpPath::applyRewrites($typed), '/');
-        $rewritten = $endpoint !== $typed;
-
-        // URL finale réellement appelée (host EBP du compte + endpoint effectif), pour affichage.
+        // URL finale réellement appelée (host EBP du compte + endpoint), pour affichage.
         $finalUrl = rtrim($account->apiBaseUrl(), '/').'/'.$endpoint;
 
         $meta = [
             'url' => $finalUrl,
             'method' => $method,
             'endpoint' => $endpoint,
-            'rewritten' => $rewritten,
-            'typedEndpoint' => $typed,
         ];
 
         $startedAt = microtime(true);

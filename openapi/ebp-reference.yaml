@@ -1080,7 +1080,7 @@ paths:
               originDocumentNumber: DOC01
       tags:
       - Gestion
-  /gescom/api/v1/Folders/{FolderId}/Items/ItemsExtendedQuery:
+  /gescom/api/v1/Folders/{FolderId}/Items/ItemsExtentedQuery:
     get:
       summary: Obtenir les articles filtrés (Item) - Gestion
       description: Cette requête permet de récupérer la liste des articles “brut” d’un dossier avec des filtre paramétrables.
@@ -1227,7 +1227,7 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
       tags:
       - Gestion
-  /gescom/api/v1/Folders/{FolderId}/Items/ItemsExtendedQuery/WithTrackingStock:
+  /gescom/api/v1/Folders/{FolderId}/Items/ItemsExtentedQuery/WithTrackingStock:
     get:
       summary: Obtenir les articles filtrés et ses suivis de stocks - Gestion
       description: Cette requête permet de récupérer la liste des articles et les lignes associées en fonction des filtres renseignées.
@@ -14346,7 +14346,7 @@ paths:
               originDocumentNumber: DOC01
       tags:
       - Bâtiment
-  /batiment/api/v1/Folders/{FolderId}/Items/ItemsExtendedQuery:
+  /batiment/api/v1/Folders/{FolderId}/Items/ItemsExtentedQuery:
     get:
       summary: Obtenir les articles filtrés (Item) - Batiment
       description: 'Cette requête permet de récupérer la liste des articles “brut” d’un dossier avec des filtre paramétrables.
@@ -14498,7 +14498,7 @@ paths:
       - url: https://api-developpeurs.ebp.com/gescom/api
       tags:
       - Bâtiment
-  /batiment/api/v1/Folders/{FolderId}/Items/ItemsExtendedQuery/WithTrackingStock:
+  /batiment/api/v1/Folders/{FolderId}/Items/ItemsExtentedQuery/WithTrackingStock:
     get:
       summary: Obtenir les articles filtrés et ses suivis de stocks - Batiment
       description: Cette requête permet de récupérer la liste des articles et les lignes associées en fonction des filtres renseignées.
