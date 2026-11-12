@@ -88,6 +88,55 @@ class ProxyRelayPerModuleTest extends TestCase
             && ! str_contains($r->url(), 'ItemsExtendedQuery'));
     }
 
+    public function test_un_wherecondition_odata_est_traduit_en_yaml_ebp_avant_relai(): void
+    {
+        Http::fake(['*' => Http::response(['results' => []], 200)]);
+
+        // L'app envoie l'OData ; la gateway doit relayer le YAML CustomFilter correspondant.
+        $this->getJson("/gescom/api/v1/Items/ItemsExtentedQuery?WhereCondition=".rawurlencode("BarCode eq '366061900001'"), $this->auth())
+            ->assertOk();
+
+        Http::assertSent(function ($r) {
+            $sent = urldecode($r->url());
+
+            return str_contains($sent, 'type: CustomFilter')
+                && str_contains($sent, 'column: BarCode')
+                && str_contains($sent, 'operator: Equal')
+                && str_contains($sent, 'valueType: String')
+                && str_contains($sent, "- '366061900001'")
+                // Pas de syntaxe OData résiduelle dans ce qui part vers EBP.
+                && ! str_contains($sent, "eq '366061900001'");
+        });
+    }
+
+    public function test_un_wherecondition_odata_imbrique_est_traduit_en_imbricationfilter(): void
+    {
+        Http::fake(['*' => Http::response(['results' => []], 200)]);
+
+        $this->getJson("/gescom/api/v1/Items/ItemsExtentedQuery?WhereCondition=".rawurlencode("(ActiveState eq 0) and (RealStock gt 0)"), $this->auth())
+            ->assertOk();
+
+        Http::assertSent(function ($r) {
+            $sent = urldecode($r->url());
+
+            return str_contains($sent, 'type: ImbricationFilter')
+                && str_contains($sent, 'operator: And')
+                && str_contains($sent, 'column: ActiveState')
+                && str_contains($sent, 'operator: Upper');
+        });
+    }
+
+    public function test_un_wherecondition_deja_en_yaml_est_relaye_tel_quel(): void
+    {
+        Http::fake(['*' => Http::response(['results' => []], 200)]);
+
+        $yaml = "type: CustomFilter\ncolumn: BarCode\noperator: Equal\nvalueType: String\nvalue:\n  - '123'";
+        $this->getJson("/gescom/api/v1/Items/ItemsExtentedQuery?WhereCondition=".rawurlencode($yaml), $this->auth())
+            ->assertOk();
+
+        Http::assertSent(fn ($r) => str_contains(urldecode($r->url()), $yaml));
+    }
+
     public function test_le_folderid_est_injecte_dans_l_url_quand_absent(): void
     {
         Http::fake(['*/Folders/3691/Clients*' => Http::response(['results' => []])]);
