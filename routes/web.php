@@ -4,8 +4,10 @@ use App\Http\Controllers\Admin\AdminActionController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApiDocController;
 use App\Http\Controllers\Admin\InvitationController;
+use App\Http\Controllers\Admin\PairingController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
+use App\Http\Controllers\FakeEbp\FakeEbpController;
 use App\Http\Controllers\HealthcheckController;
 use App\Http\Controllers\OAuth\EbpOAuthController;
 use Illuminate\Support\Facades\Route;
@@ -31,13 +33,13 @@ Route::get('/healthcheck', HealthcheckController::class)->name('healthcheck');
 */
 if (! app()->environment('production')) {
     Route::prefix('fake-ebp')->group(function () {
-        Route::get('/connect/authorize', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'authorize']);
-        Route::post('/connect/authorize', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'authorizeSubmit']);
-        Route::post('/connect/token', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'token']);
-        Route::get('/gescom/api/v1/Folders', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'folders']);
-        Route::get('/gescom/api/v1/Folders/{folder}/Clients', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'clients']);
-        Route::get('/gescom/api/v1/Folders/{folder}/Items/{any?}', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'items'])->where('any', '.*');
-        Route::get('/gescom/api/v1/Folders/{folder}/Documents/{type}', [\App\Http\Controllers\FakeEbp\FakeEbpController::class, 'documents']);
+        Route::get('/connect/authorize', [FakeEbpController::class, 'authorize']);
+        Route::post('/connect/authorize', [FakeEbpController::class, 'authorizeSubmit']);
+        Route::post('/connect/token', [FakeEbpController::class, 'token']);
+        Route::get('/gescom/api/v1/Folders', [FakeEbpController::class, 'folders']);
+        Route::get('/gescom/api/v1/Folders/{folder}/Clients', [FakeEbpController::class, 'clients']);
+        Route::get('/gescom/api/v1/Folders/{folder}/Items/{any?}', [FakeEbpController::class, 'items'])->where('any', '.*');
+        Route::get('/gescom/api/v1/Folders/{folder}/Documents/{type}', [FakeEbpController::class, 'documents']);
     });
 }
 
@@ -55,7 +57,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::patch('/comptes/{account}', [AdminActionController::class, 'updateAccount'])->name('admin.comptes.update');
     Route::delete('/comptes/{account}', [AdminActionController::class, 'destroyAccount'])->name('admin.comptes.destroy');
     Route::post('/comptes/{account}/sync-folders', [AdminActionController::class, 'syncFolders'])->name('admin.comptes.sync-folders');
-    Route::post('/comptes/{account}/manual-token', [\App\Http\Controllers\OAuth\EbpOAuthController::class, 'manualExchange'])->name('admin.comptes.manual-token');
+    Route::post('/comptes/{account}/manual-token', [EbpOAuthController::class, 'manualExchange'])->name('admin.comptes.manual-token');
     Route::get('/jetons', [AdminController::class, 'jetons']);
     Route::get('/admins', [AdminController::class, 'admins']);
     Route::get('/ip', [AdminController::class, 'ip']);
@@ -73,7 +75,8 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('/jetons', [AdminActionController::class, 'storeToken'])->name('admin.tokens.store');
     Route::delete('/jetons/{token}', [AdminActionController::class, 'revokeToken'])->name('admin.tokens.revoke');
     Route::post('/jetons/{token}/regenerate', [AdminActionController::class, 'regenerateToken'])->name('admin.tokens.regenerate');
-    Route::post('/jetons/{token}/pairing', [\App\Http\Controllers\Admin\PairingController::class, 'create'])->name('admin.tokens.pairing');
+    Route::post('/jetons/{token}/pairing', [PairingController::class, 'create'])->name('admin.tokens.pairing');
+    Route::put('/jetons/{token}/regles', [AdminActionController::class, 'updateTokenRules'])->name('admin.tokens.rules');
     Route::post('/ip', [AdminActionController::class, 'storeIp'])->name('admin.ip.store');
     Route::delete('/ip/{ip}', [AdminActionController::class, 'destroyIp'])->name('admin.ip.destroy');
     Route::post('/admins', [AdminActionController::class, 'storeAdmin'])->name('admin.admins.store');
