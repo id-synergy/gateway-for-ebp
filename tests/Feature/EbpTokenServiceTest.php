@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\EbpAccount;
 use App\Services\Ebp\EbpTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -113,5 +114,57 @@ class EbpTokenServiceTest extends TestCase
         $access = $this->service()->validAccessToken($account->fresh());
 
         $this->assertSame('ACCESS_2', $access);
+    }
+
+    public function test_valid_access_token_renouvelle_si_echeance_absente(): void
+    {
+        $account = EbpAccount::factory()->create();
+
+        Http::fake([
+            config('ebp.token_url') => Http::sequence()
+                ->push(['access_token' => 'ACCESS_1', 'refresh_token' => 'REFRESH_1', 'expires_in' => 3600])
+                ->push(['access_token' => 'ACCESS_2', 'refresh_token' => 'REFRESH_2', 'expires_in' => 3600]),
+        ]);
+
+        $this->service()->exchangeCode($account, 'AUTH_CODE');
+
+        // Bug observé en prod : échéance nulle en base => le token doit être considéré expiré.
+        $account->token->update(['access_token_expires_at' => null]);
+
+        $access = $this->service()->validAccessToken($account->fresh());
+
+        $this->assertSame('ACCESS_2', $access);
+    }
+
+    public function test_valid_access_token_attend_le_verrou_et_ne_declenche_pas_un_second_refresh(): void
+    {
+        $account = EbpAccount::factory()->create();
+
+        Http::fake([
+            config('ebp.token_url') => Http::response([
+                'access_token' => 'ACCESS_1',
+                'refresh_token' => 'REFRESH_1',
+                'expires_in' => 3600,
+            ]),
+        ]);
+
+        $this->service()->exchangeCode($account, 'AUTH_CODE');
+        $account->token->update(['access_token_expires_at' => now()->subMinute()]);
+
+        // Simule un refresh concurrent : le verrou du compte est déjà détenu, et le token
+        // a déjà été rafraîchi par cet autre process pendant que notre appel attend.
+        $lock = Cache::lock("ebp-token-refresh:{$account->id}", 60);
+        $this->assertTrue($lock->get());
+        $account->token->update(['access_token' => 'ACCESS_FRESH', 'access_token_expires_at' => now()->addHour()]);
+
+        try {
+            $access = $this->service()->validAccessToken($account->fresh());
+        } finally {
+            $lock->release();
+        }
+
+        // On relit le token frais au lieu de rejouer un refresh (qui aurait invalidé le refresh token).
+        $this->assertSame('ACCESS_FRESH', $access);
+        Http::assertSentCount(1); // uniquement l'échange initial, aucun refresh
     }
 }
