@@ -9,6 +9,7 @@ use App\Models\EbpFolder;
 use App\Models\RequestLog;
 use App\Services\Ebp\EbpClient;
 use App\Services\Ebp\EbpEndpointCatalog;
+use App\Services\Ebp\EbpPath;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -128,6 +129,8 @@ class EbpTesterController extends Controller
             'query' => 'nullable|array',
             'body' => 'nullable',
             'confirmed' => 'nullable|boolean',
+            // Endpoint brut : désactive les réécritures de compatibilité EBP (orthographe, etc.).
+            'raw' => 'nullable|boolean',
         ]);
 
         $method = strtoupper($data['method']);
@@ -150,12 +153,26 @@ class EbpTesterController extends Controller
                 ->first();
         }
 
-        $endpoint = ltrim(trim($data['endpoint']), '/');
+        $typed = ltrim(trim($data['endpoint']), '/');
         $query = $this->normalizeQuery($data['query'] ?? []);
         $body = $this->decodeBody($method, $data['body'] ?? null);
 
-        // URL finale réellement appelée (host EBP du compte + endpoint), pour affichage.
+        // Réécritures de compatibilité EBP (ex. ItemsExtendedQuery -> ItemsExtentedQuery),
+        // appliquées comme pour une vraie app, sauf si l'utilisateur demande l'endpoint brut.
+        $raw = (bool) ($data['raw'] ?? false);
+        $endpoint = $raw ? $typed : ltrim(EbpPath::applyRewrites($typed), '/');
+        $rewritten = $endpoint !== $typed;
+
+        // URL finale réellement appelée (host EBP du compte + endpoint effectif), pour affichage.
         $finalUrl = rtrim($account->apiBaseUrl(), '/').'/'.$endpoint;
+
+        $meta = [
+            'url' => $finalUrl,
+            'method' => $method,
+            'endpoint' => $endpoint,
+            'rewritten' => $rewritten,
+            'typedEndpoint' => $typed,
+        ];
 
         $startedAt = microtime(true);
 
@@ -163,24 +180,20 @@ class EbpTesterController extends Controller
             $result = $client->send($account, $folder, $method, $endpoint, $query, $body);
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
-            return response()->json([
+            return response()->json($meta + [
                 'ok' => true,
                 'status' => $result['status'],
                 'durationMs' => $durationMs,
-                'url' => $finalUrl,
-                'method' => $method,
                 'body' => $this->prettyBody($result['raw']),
             ]);
         } catch (EbpApiException $e) {
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
             // Erreur EBP (4xx/5xx) : on renvoie quand même le corps, c'est le cœur du débogage.
-            return response()->json([
+            return response()->json($meta + [
                 'ok' => false,
                 'status' => $e->status,
                 'durationMs' => $durationMs,
-                'url' => $finalUrl,
-                'method' => $method,
                 'body' => $this->prettyBody($e->body),
             ]);
         } catch (\Throwable $e) {
