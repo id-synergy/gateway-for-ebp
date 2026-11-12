@@ -6,7 +6,9 @@ use App\Exceptions\Ebp\EbpApiException;
 use App\Http\Controllers\Controller;
 use App\Models\EbpAccount;
 use App\Models\EbpFolder;
+use App\Models\RequestLog;
 use App\Services\Ebp\EbpClient;
+use App\Services\Ebp\EbpEndpointCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -26,6 +28,95 @@ class EbpTesterController extends Controller
 
     /** Verbes qui écrivent dans EBP : exigent une confirmation explicite côté UI. */
     private const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+    /** Fenêtre de l'historique d'endpoints proposé à l'autocomplétion. */
+    private const HISTORY_DAYS = 30;
+
+    /**
+     * Suggestions pour l'autocomplétion du champ endpoint :
+     *  - « history » : endpoints réellement appelés sur les 30 derniers jours, distincts, avec
+     *    la méthode et les derniers paramètres (query / WhereCondition) de chaque endpoint ;
+     *  - « catalog » : endpoints EBP concrets issus des specs OpenAPI, groupés par module.
+     *
+     * Quand un dossier est précisé, {FolderId} est remplacé par son identifiant réel dans les
+     * deux sources (le catalogue par substitution, l'historique par normalisation du segment
+     * Folders/<id>). Sans dossier, {FolderId} est laissé tel quel.
+     */
+    public function suggestions(Request $request, EbpEndpointCatalog $catalog): JsonResponse
+    {
+        $data = $request->validate([
+            'account' => 'nullable|integer|exists:ebp_accounts,id',
+            'folder' => 'nullable|integer',
+        ]);
+
+        // Identifiant EBP du dossier choisi (folder_id), s'il appartient bien au compte.
+        $folderId = null;
+        if (! empty($data['folder'])) {
+            $folder = EbpFolder::query()
+                ->when(! empty($data['account']), fn ($q) => $q->where('ebp_account_id', $data['account']))
+                ->whereKey($data['folder'])
+                ->first();
+            $folderId = $folder?->folder_id;
+        }
+
+        return response()->json([
+            'history' => $this->history($data['account'] ?? null, $folderId),
+            'catalog' => $catalog->groupsForFolder($folderId),
+        ]);
+    }
+
+    /**
+     * Endpoints distincts appelés sur la fenêtre d'historique, le plus récent d'abord, avec les
+     * derniers paramètres utilisés. Filtrés par compte quand il est fourni.
+     *
+     * Le corps de requête n'est pas journalisé par la gateway (seul le corps de RÉPONSE l'est) :
+     * l'historique pré-remplit donc l'endpoint, la méthode et les params (query + WhereCondition),
+     * mais pas le body d'écriture.
+     *
+     * @return array<int,array{method:string,endpoint:string,query:array<string,mixed>,lastCall:string}>
+     */
+    private function history(?int $accountId, ?string $folderId): array
+    {
+        $logs = RequestLog::query()
+            ->where('occurred_at', '>=', now()->subDays(self::HISTORY_DAYS))
+            ->whereNotNull('ebp_endpoint')
+            ->when($accountId, fn ($q) => $q->where('ebp_account_id', $accountId))
+            ->orderByDesc('occurred_at')
+            ->get(['method', 'ebp_endpoint', 'params', 'occurred_at']);
+
+        $seen = [];
+        $out = [];
+
+        foreach ($logs as $log) {
+            $endpoint = $folderId ? $this->normalizeFolder($log->ebp_endpoint, $folderId) : $log->ebp_endpoint;
+            $method = $log->method ?? 'GET';
+            $key = $method.' '.$endpoint;
+
+            // Premier vu = le plus récent (tri desc) : on garde ses params.
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+
+            $out[] = [
+                'method' => $method,
+                'endpoint' => $endpoint,
+                'query' => is_array($log->params) ? $log->params : [],
+                'lastCall' => $log->occurred_at?->format('d/m/Y H:i') ?? '',
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Remplace l'identifiant de dossier d'un chemin concret par celui du dossier courant.
+     * Ne touche qu'au segment qui suit « Folders/ » ; les chemins sans ce segment sont inchangés.
+     */
+    private function normalizeFolder(string $endpoint, string $folderId): string
+    {
+        return preg_replace('#(Folders/)[^/]+#', '${1}'.$folderId, $endpoint, 1) ?? $endpoint;
+    }
 
     public function run(Request $request, EbpClient $client): JsonResponse
     {

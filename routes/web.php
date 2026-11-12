@@ -65,6 +65,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::get('/logs', [AdminController::class, 'logs']);
     Route::get('/logs/{log}', [AdminController::class, 'log'])->name('admin.logs.show');
     Route::get('/testeur', [AdminController::class, 'testeur'])->name('admin.testeur');
+    Route::get('/testeur/suggestions', [EbpTesterController::class, 'suggestions'])->name('admin.testeur.suggestions');
     Route::post('/testeur/run', [EbpTesterController::class, 'run'])->name('admin.testeur.run');
     Route::get('/jobs', [AdminController::class, 'jobs']);
     Route::get('/jobs/{job:public_id}', [AdminController::class, 'job'])->name('admin.jobs.show');
