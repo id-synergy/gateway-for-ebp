@@ -84,7 +84,7 @@ class AppTokenRouteRulesTest extends TestCase
         Http::fake(['*' => Http::response(['results' => []], 200)]);
         $this->addRule(['GET'], 'gescom/api/v1/Clients');
 
-        $this->getJson('/gescom/api/v1/Items/ItemsExtendedQuery', $this->auth())
+        $this->getJson('/gescom/api/v1/Items/ItemsExtentedQuery', $this->auth())
             ->assertStatus(403)
             ->assertJson(['error' => 'route_not_allowed']);
     }
@@ -105,7 +105,7 @@ class AppTokenRouteRulesTest extends TestCase
         Http::fake(['*' => Http::response(['results' => []], 200)]);
         $this->addRule(['GET'], 'gescom/api/v1/Items/**');
 
-        $this->getJson('/gescom/api/v1/Items/ItemsExtendedQuery', $this->auth())->assertOk();
+        $this->getJson('/gescom/api/v1/Items/ItemsExtentedQuery', $this->auth())->assertOk();
         $this->getJson('/gescom/api/v1/Clients', $this->auth())->assertStatus(403);
     }
 
