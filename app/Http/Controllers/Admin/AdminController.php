@@ -9,12 +9,14 @@ use App\Models\AllowedIp;
 use App\Models\AppToken;
 use App\Models\EbpAccount;
 use App\Models\GatewayJob;
-use App\Models\NotificationPreference;
+use App\Models\Invitation;
 use App\Models\RequestLog;
 use App\Models\User;
+use App\Services\Apps\RoutePatternCatalog;
 use App\Services\Ebp\QuotaRegulator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -193,16 +195,21 @@ class AdminController extends Controller
         return response()->json($this->eventsPage($account, $before));
     }
 
-    public function jetons(): Response
+    public function jetons(RoutePatternCatalog $catalog): Response
     {
         return Inertia::render('Admin/Jetons', [
-            'tokens' => AppToken::with(['account', 'defaultFolder'])->orderByDesc('created_at')->get()->map(fn ($t) => [
+            'tokens' => AppToken::with(['account', 'defaultFolder', 'routeRules'])->orderByDesc('created_at')->get()->map(fn ($t) => [
                 'id' => $t->id,
                 'name' => $t->name,
                 'account' => $t->account?->label ?? '—',
                 'folder' => $t->defaultFolder ? ($t->defaultFolder->short_name.' #'.$t->defaultFolder->folder_id) : '— (par requête)',
                 'lastUsed' => optional($t->last_used_at)->diffForHumans() ?? 'jamais',
                 'active' => $t->isUsable(),
+                // Règles d'accès : liste vide = jeton « ouvert » (périmètre global).
+                'rules' => $t->routeRules->map(fn ($r) => [
+                    'methods' => $r->methods,
+                    'pattern' => $r->pattern,
+                ])->values(),
             ]),
             'accounts' => EbpAccount::with('folders')->get()->map(fn ($a) => [
                 'id' => $a->id, 'label' => $a->label,
@@ -210,6 +217,8 @@ class AdminController extends Controller
             ]),
             // Endpoint de base de la gateway, pour le QR code de connexion des apps.
             'endpoint' => rtrim(url('/'), '/'),
+            // Catalogue de patterns connus (groupés par module) pour l'autocomplétion des règles.
+            'routeCatalog' => $catalog->suggestions(),
         ]);
     }
 
@@ -242,7 +251,7 @@ class AdminController extends Controller
                     $u->id => (bool) optional($u->notificationPreferences->firstWhere('alert_type', $type))->enabled,
                 ]),
             ]),
-            'invitations' => \App\Models\Invitation::pending()->latest()->get()->map(fn ($i) => [
+            'invitations' => Invitation::pending()->latest()->get()->map(fn ($i) => [
                 'id' => $i->id,
                 'name' => $i->name,
                 'email' => $i->email,
@@ -329,8 +338,8 @@ class AdminController extends Controller
         $log->load(['appToken', 'account', 'folder']);
 
         $body = null;
-        if ($log->response_body_path && \Illuminate\Support\Facades\Storage::disk('local')->exists($log->response_body_path)) {
-            $raw = \Illuminate\Support\Facades\Storage::disk('local')->get($log->response_body_path);
+        if ($log->response_body_path && Storage::disk('local')->exists($log->response_body_path)) {
+            $raw = Storage::disk('local')->get($log->response_body_path);
             $decoded = json_decode($raw, true);
             $body = $decoded !== null ? json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $raw;
         }
@@ -378,8 +387,8 @@ class AdminController extends Controller
 
     private function jobResult(GatewayJob $job): mixed
     {
-        if ($job->result_path && \Illuminate\Support\Facades\Storage::disk('local')->exists($job->result_path)) {
-            return json_decode(\Illuminate\Support\Facades\Storage::disk('local')->get($job->result_path), true);
+        if ($job->result_path && Storage::disk('local')->exists($job->result_path)) {
+            return json_decode(Storage::disk('local')->get($job->result_path), true);
         }
 
         return $job->result_inline;

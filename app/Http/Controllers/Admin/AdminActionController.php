@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AllowedIp;
 use App\Models\AppToken;
+use App\Models\AppTokenRouteRule;
 use App\Models\EbpAccount;
 use App\Models\EbpFolder;
 use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Services\Accounts\AccountEventLogger;
 use App\Services\Apps\AppTokenService;
+use App\Services\Ebp\EbpFolderDiscovery;
+use App\Services\Ebp\GatewayCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -56,7 +59,7 @@ class AdminActionController extends Controller
     {
         // Une clé révoquée ne se régénère pas : la révocation est définitive, on recrée un jeton.
         if (! $token->is_active) {
-            return back()->with('error', "Ce jeton est révoqué : créez-en un nouveau plutôt que de le régénérer.");
+            return back()->with('error', 'Ce jeton est révoqué : créez-en un nouveau plutôt que de le régénérer.');
         }
 
         $plain = $this->tokens->regenerate($token);
@@ -64,6 +67,44 @@ class AdminActionController extends Controller
 
         // Le nouveau jeton en clair n'est montré qu'une fois, via le flash.
         return back()->with('newToken', $plain);
+    }
+
+    /**
+     * Remplace l'intégralité des règles d'accès d'un jeton (liste blanche de routes EBP).
+     *
+     * Une liste vide « ouvre » le jeton (accès au périmètre global) ; au moins une règle le
+     * restreint. Les verbes sont normalisés en MAJUSCULES, le pattern débarrassé de ses « / »
+     * de tête/queue. L'ordre de saisie est conservé via `position`.
+     */
+    public function updateTokenRules(Request $request, AppToken $token): RedirectResponse
+    {
+        $data = $request->validate([
+            'rules' => 'present|array',
+            'rules.*.methods' => 'required|array|min:1',
+            'rules.*.methods.*' => 'required|string|in:GET,POST,PUT,PATCH,DELETE',
+            'rules.*.pattern' => 'required|string|max:255',
+        ], [], [
+            'rules.*.methods' => 'verbes',
+            'rules.*.pattern' => 'motif de route',
+        ]);
+
+        $token->routeRules()->delete();
+
+        foreach (array_values($data['rules']) as $i => $rule) {
+            AppTokenRouteRule::create([
+                'app_token_id' => $token->id,
+                'methods' => array_values(array_unique(array_map('strtoupper', $rule['methods']))),
+                'pattern' => trim($rule['pattern'], '/'),
+                'position' => $i,
+            ]);
+        }
+
+        $count = count($data['rules']);
+        $message = $count === 0
+            ? "Règles supprimées : le jeton « {$token->name} » a de nouveau accès à tout le périmètre EBP."
+            : "{$count} règle(s) d'accès enregistrée(s) pour le jeton « {$token->name} ».";
+
+        return back()->with('success', $message);
     }
 
     public function storeIp(Request $request): RedirectResponse
@@ -213,7 +254,7 @@ class AdminActionController extends Controller
         return to_route('admin.comptes.index')->with('success', 'Compte EBP supprimé.');
     }
 
-    public function syncFolders(EbpAccount $account, \App\Services\Ebp\EbpFolderDiscovery $discovery): RedirectResponse
+    public function syncFolders(EbpAccount $account, EbpFolderDiscovery $discovery): RedirectResponse
     {
         if ($account->status !== 'connected') {
             return back()->with('error', "Connectez d'abord le compte à EBP avant de synchroniser les dossiers.");
@@ -229,7 +270,7 @@ class AdminActionController extends Controller
     }
 
     /** Vide le cache de lecture d'un compte (tous ses dossiers). */
-    public function clearAccountCache(EbpAccount $account, \App\Services\Ebp\GatewayCache $cache): RedirectResponse
+    public function clearAccountCache(EbpAccount $account, GatewayCache $cache): RedirectResponse
     {
         $cache->flushAccount($account);
         $this->events->cacheCleared($account);
@@ -238,7 +279,7 @@ class AdminActionController extends Controller
     }
 
     /** Vide tout le cache de lecture (tous les comptes). */
-    public function clearAllCache(\App\Services\Ebp\GatewayCache $cache): RedirectResponse
+    public function clearAllCache(GatewayCache $cache): RedirectResponse
     {
         $cache->flushAll();
 
