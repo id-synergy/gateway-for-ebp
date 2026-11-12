@@ -123,11 +123,10 @@ return [
             // et on la corrige ici vers ce qu'EBP attend réellement. Table {motif regex => remplacement}
             // (preg_replace, appliqué dans l'ordre). Garder ces contournements documentés et datés :
             // à retirer si EBP corrige son API.
+            // Réécritures de compatibilité {motif regex => remplacement} appliquées au chemin
+            // avant relai vers EBP. Vide : nos specs/catalogues utilisent désormais l'orthographe
+            // réellement servie par EBP (ex. ItemsExtentedQuery), donc aucune correction n'est due.
             'path_rewrites' => [
-                // Articles : EBP attend « ItemsExtentedQuery » (faute de frappe, un T),
-                // alors que sa spec et le bon anglais écrivent « ItemsExtendedQuery ».
-                // Vérifié en production le 2026-11-12 (D => 404, T => 200).
-                '#/Items/ItemsExtendedQuery#' => '/Items/ItemsExtentedQuery',
             ],
         ],
     ],

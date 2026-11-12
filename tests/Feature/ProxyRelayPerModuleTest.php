@@ -51,12 +51,12 @@ class ProxyRelayPerModuleTest extends TestCase
     public static function modules(): array
     {
         return [
-            'gescom'      => ['/gescom/api/v1/Clients', '/gescom/api/v1/Folders/3691/Clients'],
-            'gctpe'       => ['/hubbix-gctpe/api/public/v1/customers/C1', '/hubbix-gctpe/api/public/v1/customers/C1'],
-            'cpttpe'      => ['/hubbix-cpttpe/api/v1/journals', '/hubbix-cpttpe/api/v1/journals'],
-            'batiment'    => ['/batiment/api/v1/Clients', '/batiment/api/v1/Folders/3691/Clients'],
-            'import'      => ['/import/api/v1/ModelSettings', '/import/api/v1/ModelSettings'],
-            'export'      => ['/export/api/v1/Status', '/export/api/v1/Status'],
+            'gescom' => ['/gescom/api/v1/Clients', '/gescom/api/v1/Folders/3691/Clients'],
+            'gctpe' => ['/hubbix-gctpe/api/public/v1/customers/C1', '/hubbix-gctpe/api/public/v1/customers/C1'],
+            'cpttpe' => ['/hubbix-cpttpe/api/v1/journals', '/hubbix-cpttpe/api/v1/journals'],
+            'batiment' => ['/batiment/api/v1/Clients', '/batiment/api/v1/Folders/3691/Clients'],
+            'import' => ['/import/api/v1/ModelSettings', '/import/api/v1/ModelSettings'],
+            'export' => ['/export/api/v1/Status', '/export/api/v1/Status'],
             'maintenance' => ['/maintenance/api/v1/Folders', '/maintenance/api/v1/Folders'],
         ];
     }
@@ -76,16 +76,15 @@ class ProxyRelayPerModuleTest extends TestCase
         $this->getJson('/inconnu/api/v1/Truc', $this->auth())->assertStatus(404);
     }
 
-    public function test_l_orthographe_fautive_ebp_des_articles_est_corrigee_avant_relai(): void
+    public function test_l_endpoint_des_articles_est_relaye_tel_quel(): void
     {
-        // L'app appelle l'endpoint tel que documenté (« ItemsExtendedQuery »), mais l'API EBP
-        // n'accepte que sa faute de frappe « ItemsExtentedQuery ». La gateway doit réécrire.
+        // Nos specs/catalogues utilisent désormais l'orthographe réellement servie par EBP
+        // (« ItemsExtentedQuery ») : plus aucune réécriture, la gateway relaie le chemin tel quel.
         Http::fake(['*' => Http::response(['results' => []], 200)]);
 
-        $this->getJson('/gescom/api/v1/Items/ItemsExtendedQuery', $this->auth())->assertOk();
+        $this->getJson('/gescom/api/v1/Items/ItemsExtentedQuery', $this->auth())->assertOk();
 
-        Http::assertSent(fn ($r) => str_contains($r->url(), '/Items/ItemsExtentedQuery')
-            && ! str_contains($r->url(), 'ItemsExtendedQuery'));
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/Items/ItemsExtentedQuery'));
     }
 
     public function test_un_wherecondition_odata_est_traduit_en_yaml_ebp_avant_relai(): void
@@ -93,7 +92,7 @@ class ProxyRelayPerModuleTest extends TestCase
         Http::fake(['*' => Http::response(['results' => []], 200)]);
 
         // L'app envoie l'OData ; la gateway doit relayer le YAML CustomFilter correspondant.
-        $this->getJson("/gescom/api/v1/Items/ItemsExtentedQuery?WhereCondition=".rawurlencode("BarCode eq '366061900001'"), $this->auth())
+        $this->getJson('/gescom/api/v1/Items/ItemsExtentedQuery?WhereCondition='.rawurlencode("BarCode eq '366061900001'"), $this->auth())
             ->assertOk();
 
         Http::assertSent(function ($r) {
@@ -113,7 +112,7 @@ class ProxyRelayPerModuleTest extends TestCase
     {
         Http::fake(['*' => Http::response(['results' => []], 200)]);
 
-        $this->getJson("/gescom/api/v1/Items/ItemsExtentedQuery?WhereCondition=".rawurlencode("(ActiveState eq 0) and (RealStock gt 0)"), $this->auth())
+        $this->getJson('/gescom/api/v1/Items/ItemsExtentedQuery?WhereCondition='.rawurlencode('(ActiveState eq 0) and (RealStock gt 0)'), $this->auth())
             ->assertOk();
 
         Http::assertSent(function ($r) {
@@ -131,7 +130,7 @@ class ProxyRelayPerModuleTest extends TestCase
         Http::fake(['*' => Http::response(['results' => []], 200)]);
 
         $yaml = "type: CustomFilter\ncolumn: BarCode\noperator: Equal\nvalueType: String\nvalue:\n  - '123'";
-        $this->getJson("/gescom/api/v1/Items/ItemsExtentedQuery?WhereCondition=".rawurlencode($yaml), $this->auth())
+        $this->getJson('/gescom/api/v1/Items/ItemsExtentedQuery?WhereCondition='.rawurlencode($yaml), $this->auth())
             ->assertOk();
 
         Http::assertSent(fn ($r) => str_contains(urldecode($r->url()), $yaml));
