@@ -7,6 +7,7 @@ use App\Models\EbpAccount;
 use App\Models\EbpToken;
 use App\Services\Accounts\AccountEventLogger;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -129,6 +130,12 @@ class EbpTokenService
 
     /**
      * Retourne un access token valide pour le compte (renouvelle si expiré ou proche de l'expiration).
+     *
+     * Le renouvellement passe par un verrou bloquant PAR COMPTE (même clé que le job
+     * RefreshEbpTokens) : EBP applique la rotation du refresh token (l'ancien est invalidé
+     * dès qu'un nouveau est émis), donc deux refresh simultanés s'invalideraient mutuellement
+     * (400 invalid_grant, token cassé). Les apps clientes concurrentes attendent le verrou,
+     * puis relisent le token fraîchement rafraîchi au lieu d'en déclencher un second.
      */
     public function validAccessToken(EbpAccount $account): string
     {
@@ -138,15 +145,34 @@ class EbpTokenService
             throw new EbpAuthException(message: 'Compte EBP non connecté. Reconnectez le compte dans le back-office.');
         }
 
-        $expired = ! $token->access_token
-            || ! $token->access_token_expires_at
-            || $token->access_token_expires_at->subMinutes(2)->isPast();
-
-        if ($expired) {
-            $token = $this->refresh($account);
+        if (! $this->isExpired($token)) {
+            return $token->access_token;
         }
 
-        return $token->access_token;
+        // Sérialise le renouvellement par compte pour éviter la course à la rotation du refresh.
+        $lock = Cache::lock("ebp-token-refresh:{$account->id}", 60);
+        $lock->block(15); // attend jusqu'à 15 s qu'un refresh concurrent se termine
+
+        try {
+            // Un autre process a pu rafraîchir pendant l'attente : on relit avant de décider.
+            $token = $account->token()->first();
+
+            if ($token && ! $this->isExpired($token)) {
+                return $token->access_token;
+            }
+
+            return $this->refresh($account)->access_token;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /** L'access token est-il absent, sans échéance, ou à moins de 2 min de l'expiration ? */
+    private function isExpired(EbpToken $token): bool
+    {
+        return ! $token->access_token
+            || ! $token->access_token_expires_at
+            || $token->access_token_expires_at->subMinutes(2)->isPast();
     }
 
     /**
