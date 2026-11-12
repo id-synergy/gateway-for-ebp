@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\EbpAccount;
 use App\Models\EbpFolder;
+use App\Models\RequestLog;
 use App\Models\User;
 use App\Services\Ebp\EbpTokenService;
 use App\Services\Logging\RequestLogger;
@@ -233,5 +234,112 @@ class EbpTesterTest extends TestCase
                 ->where('prefill.method', 'GET')
                 ->where('prefill.endpoint', 'gescom/api/v1/Folders/405032/Items')
                 ->where('prefill.query.Limit', '50'));
+    }
+
+    public function test_les_suggestions_exigent_une_connexion(): void
+    {
+        $this->getJson('/admin/testeur/suggestions')->assertStatus(401);
+    }
+
+    public function test_les_suggestions_exposent_catalogue_et_historique(): void
+    {
+        $account = EbpAccount::factory()->create();
+
+        RequestLog::create([
+            'occurred_at' => now()->subDays(2),
+            'ebp_account_id' => $account->id,
+            'method' => 'GET',
+            'ebp_endpoint' => 'gescom/api/v1/Folders/405032/Clients',
+            'params' => ['Limit' => 10],
+            'http_status' => 200,
+            'success' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->getJson("/admin/testeur/suggestions?account={$account->id}")
+            ->assertOk()
+            ->assertJsonStructure([
+                'history' => [['method', 'endpoint', 'query', 'lastCall']],
+                'catalog' => [['module', 'prefix', 'endpoints']],
+            ])
+            ->assertJsonPath('history.0.endpoint', 'gescom/api/v1/Folders/405032/Clients')
+            ->assertJsonPath('history.0.query.Limit', 10);
+    }
+
+    public function test_lhistorique_est_distinct_et_borne_a_30_jours(): void
+    {
+        $account = EbpAccount::factory()->create();
+
+        // Deux appels sur le même endpoint : seul le plus récent (avec ses params) doit rester.
+        RequestLog::create([
+            'occurred_at' => now()->subDays(10),
+            'ebp_account_id' => $account->id,
+            'method' => 'GET', 'ebp_endpoint' => 'gescom/api/v1/Folders/405032/Items',
+            'params' => ['Limit' => 10], 'http_status' => 200, 'success' => true,
+        ]);
+        RequestLog::create([
+            'occurred_at' => now()->subDays(1),
+            'ebp_account_id' => $account->id,
+            'method' => 'GET', 'ebp_endpoint' => 'gescom/api/v1/Folders/405032/Items',
+            'params' => ['Limit' => 99], 'http_status' => 200, 'success' => true,
+        ]);
+        // Appel hors fenêtre : ignoré.
+        RequestLog::create([
+            'occurred_at' => now()->subDays(40),
+            'ebp_account_id' => $account->id,
+            'method' => 'GET', 'ebp_endpoint' => 'gescom/api/v1/Folders/405032/OldOne',
+            'params' => [], 'http_status' => 200, 'success' => true,
+        ]);
+
+        $response = $this->actingAs($this->admin())
+            ->getJson("/admin/testeur/suggestions?account={$account->id}")
+            ->assertOk();
+
+        $endpoints = collect($response->json('history'))->pluck('endpoint');
+        $this->assertSame(1, $endpoints->filter(fn ($e) => $e === 'gescom/api/v1/Folders/405032/Items')->count());
+        $this->assertFalse($endpoints->contains('gescom/api/v1/Folders/405032/OldOne'));
+        // Le plus récent garde ses params.
+        $this->assertSame(99, collect($response->json('history'))
+            ->firstWhere('endpoint', 'gescom/api/v1/Folders/405032/Items')['query']['Limit']);
+    }
+
+    public function test_le_folderid_est_injecte_dans_les_deux_sources(): void
+    {
+        $account = EbpAccount::factory()->create();
+        $folder = EbpFolder::factory()->create(['ebp_account_id' => $account->id, 'folder_id' => '999999']);
+
+        // Historique sur un AUTRE dossier : doit être normalisé vers le dossier courant.
+        RequestLog::create([
+            'occurred_at' => now()->subDays(1),
+            'ebp_account_id' => $account->id,
+            'method' => 'GET', 'ebp_endpoint' => 'gescom/api/v1/Folders/111111/Clients',
+            'params' => [], 'http_status' => 200, 'success' => true,
+        ]);
+
+        $response = $this->actingAs($this->admin())
+            ->getJson("/admin/testeur/suggestions?account={$account->id}&folder={$folder->id}")
+            ->assertOk();
+
+        // Historique normalisé.
+        $this->assertSame('gescom/api/v1/Folders/999999/Clients', $response->json('history.0.endpoint'));
+
+        // Catalogue : au moins un chemin gescom contient le dossier injecté, et plus de {FolderId}.
+        $catalogPaths = collect($response->json('catalog'))
+            ->flatMap(fn ($g) => collect($g['endpoints'])->pluck('path'));
+        $this->assertTrue($catalogPaths->contains(fn ($p) => str_contains($p, 'Folders/999999/')));
+        $this->assertFalse($catalogPaths->contains(fn ($p) => str_contains($p, '{FolderId}')));
+    }
+
+    public function test_sans_dossier_le_folderid_reste_dans_le_catalogue(): void
+    {
+        $account = EbpAccount::factory()->create();
+
+        $response = $this->actingAs($this->admin())
+            ->getJson("/admin/testeur/suggestions?account={$account->id}")
+            ->assertOk();
+
+        $catalogPaths = collect($response->json('catalog'))
+            ->flatMap(fn ($g) => collect($g['endpoints'])->pluck('path'));
+        $this->assertTrue($catalogPaths->contains(fn ($p) => str_contains($p, '{FolderId}')));
     }
 }
