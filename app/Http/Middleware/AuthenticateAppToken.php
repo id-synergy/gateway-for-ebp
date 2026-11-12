@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\EbpFolder;
 use App\Services\Apps\AppTokenService;
+use App\Services\Apps\RouteRuleMatcher;
 use App\Services\Ebp\EbpPath;
 use Closure;
 use Illuminate\Http\Request;
@@ -16,7 +17,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class AuthenticateAppToken
 {
-    public function __construct(protected AppTokenService $tokens) {}
+    public function __construct(
+        protected AppTokenService $tokens,
+        protected RouteRuleMatcher $routeRules,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -44,6 +48,14 @@ class AuthenticateAppToken
                 'error' => 'folder_required',
                 'message' => "Aucun dossier ciblé : précisez 'folderId' ou configurez un dossier par défaut sur le jeton.",
             ], 400);
+        }
+
+        // Contexte d'accès par app : si le jeton porte des règles, l'appel proxy EBP doit
+        // matcher l'une d'elles, sinon 403. Les fonctions internes de la gateway (/api/v1 :
+        // whoami, jobs, compose, batch) ne sont JAMAIS filtrées — elles ne ciblent aucun
+        // préfixe EBP. Un jeton SANS règle garde l'accès global (défaut ouvert).
+        if ($denied = $this->routeRuleDenied($request, $token)) {
+            return $denied;
         }
 
         $token->forceFill(['last_used_at' => now()])->saveQuietly();
@@ -76,6 +88,41 @@ class AuthenticateAppToken
 
         // Tout le reste (ressources de dossier, /whoami, /compose, /batch…) exige un dossier.
         return true;
+    }
+
+    /**
+     * Les règles d'accès du jeton refusent-elles cet appel ? Retourne la réponse 403 si oui.
+     *
+     * Ne filtre QUE les chemins proxy EBP (préfixés par un module EBP). Les fonctions gateway
+     * (/api/v1/…) n'ont pas de préfixe EBP et passent toujours. Un jeton sans règle passe aussi
+     * (défaut ouvert). L'intersection avec le périmètre global est garantie « gratuitement » :
+     * un chemin hors préfixe est déjà rejeté en 404 par le proxy, donc une règle ne peut pas
+     * élargir au-delà de ce que la gateway autorise déjà.
+     */
+    private function routeRuleDenied(Request $request, $token): ?Response
+    {
+        $path = ltrim($request->path(), '/');
+
+        // Pas un chemin proxy EBP (ex. /api/v1/whoami) -> pas de filtrage par règles.
+        if (EbpPath::matchPrefix($path) === null) {
+            return null;
+        }
+
+        $rules = $token->routeRules()->get();
+
+        // Aucune règle -> accès global inchangé (défaut ouvert).
+        if ($rules->isEmpty()) {
+            return null;
+        }
+
+        if ($this->routeRules->allows($rules, $request->method(), $path)) {
+            return null;
+        }
+
+        return response()->json([
+            'error' => 'route_not_allowed',
+            'message' => "Cette application n'est pas autorisée à appeler cette route EBP ({$request->method()} {$path}).",
+        ], 403);
     }
 
     private function resolveFolder(Request $request, $token): ?EbpFolder

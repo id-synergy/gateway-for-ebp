@@ -13,13 +13,21 @@ import { Label } from '@/components/ui/label';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Plus, Copy, Check, RefreshCw, QrCode, X } from 'lucide-vue-next';
+import { Plus, Copy, Check, RefreshCw, QrCode, X, ShieldCheck, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps({
     tokens: { type: Array, default: () => [] },
     accounts: { type: Array, default: () => [] },
     endpoint: { type: String, default: '' },
+    routeCatalog: { type: Array, default: () => [] },
 });
+
+const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+
+// Tous les patterns connus, à plat, pour la datalist d'autocomplétion.
+const allPatterns = computed(() =>
+    props.routeCatalog.flatMap((m) => m.routes.map((r) => r.pattern)),
+);
 
 const page = usePage();
 const showForm = ref(false);
@@ -171,6 +179,44 @@ function regenerate(token) {
 
     router.post(`/admin/jetons/${token.id}/regenerate`, {}, { preserveScroll: true });
 }
+
+// --- Règles d'accès (contexte par application) ---
+const rulesModal = ref({ open: false, token: null });
+const rulesForm = useForm({ rules: [] });
+
+function openRules(token) {
+    // Copie profonde des règles existantes (verbes + pattern), ou liste vide (= ouvert).
+    rulesForm.clearErrors();
+    rulesForm.rules = (token.rules ?? []).map((r) => ({
+        methods: [...r.methods],
+        pattern: r.pattern,
+    }));
+    rulesModal.value = { open: true, token };
+}
+function closeRules() {
+    rulesModal.value.open = false;
+}
+function addRule() {
+    rulesForm.rules.push({ methods: ['GET'], pattern: '' });
+}
+function removeRule(index) {
+    rulesForm.rules.splice(index, 1);
+}
+function toggleMethod(rule, method) {
+    const i = rule.methods.indexOf(method);
+    if (i === -1) rule.methods.push(method);
+    else rule.methods.splice(i, 1);
+}
+function saveRules() {
+    rulesForm.put(`/admin/jetons/${rulesModal.value.token.id}/regles`, {
+        preserveScroll: true,
+        onSuccess: () => { rulesModal.value.open = false; },
+    });
+}
+// Erreur de validation ciblant une règle précise (ex. "rules.0.pattern").
+function ruleError(index, field) {
+    return rulesForm.errors[`rules.${index}.${field}`];
+}
 </script>
 
 <template>
@@ -250,6 +296,7 @@ function regenerate(token) {
                                 <TableHead>Application</TableHead>
                                 <TableHead>Compte EBP</TableHead>
                                 <TableHead>Dossier par défaut</TableHead>
+                                <TableHead>Accès EBP</TableHead>
                                 <TableHead>Dernière utilisation</TableHead>
                                 <TableHead>État</TableHead>
                                 <TableHead class="text-right">Actions</TableHead>
@@ -260,10 +307,19 @@ function regenerate(token) {
                                 <TableCell class="font-medium">{{ t.name }}</TableCell>
                                 <TableCell class="text-muted-foreground">{{ t.account }}</TableCell>
                                 <TableCell class="text-muted-foreground">{{ t.folder }}</TableCell>
+                                <TableCell>
+                                    <Badge v-if="(t.rules?.length ?? 0) === 0" variant="secondary" title="Accès à tout le périmètre EBP autorisé">Ouvert</Badge>
+                                    <Badge v-else variant="outline" class="border-amber-400 text-amber-700" :title="`${t.rules.length} règle(s) d'accès`">
+                                        Restreint ({{ t.rules.length }})
+                                    </Badge>
+                                </TableCell>
                                 <TableCell class="text-muted-foreground">{{ t.lastUsed }}</TableCell>
                                 <TableCell><Badge variant="default">Actif</Badge></TableCell>
                                 <TableCell class="text-right">
                                     <div class="flex items-center justify-end gap-1">
+                                        <Button variant="ghost" size="sm" @click="openRules(t)">
+                                            <ShieldCheck class="size-3.5" /> Accès
+                                        </Button>
                                         <Button variant="ghost" size="sm" @click="openPairing(t)">
                                             <QrCode class="size-3.5" /> Connecter
                                         </Button>
@@ -356,6 +412,89 @@ function regenerate(token) {
                             après coup est inutile.
                         </p>
                     </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modale d'édition des règles d'accès (contexte par application) -->
+        <div v-if="rulesModal.open" class="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" @click.self="closeRules">
+            <div class="w-full max-w-2xl rounded-[1.5rem] bg-background border border-[#E4DFCE] shadow-xl max-h-[90vh] flex flex-col">
+                <div class="p-5 border-b border-[#E4DFCE] flex items-center justify-between">
+                    <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2">
+                        <ShieldCheck class="size-4" /> Accès EBP de « {{ rulesModal.token?.name }} »
+                    </h3>
+                    <Button variant="ghost" size="icon" @click="closeRules" aria-label="Fermer"><X class="size-4" /></Button>
+                </div>
+
+                <div class="p-5 space-y-4 overflow-y-auto">
+                    <!-- Explication de la sémantique ouvert / restreint -->
+                    <div class="rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+                        <template v-if="rulesForm.rules.length === 0">
+                            <strong class="text-[#002C52]">Aucune règle : accès ouvert.</strong>
+                            L'application peut appeler tout le périmètre EBP autorisé par la gateway.
+                            Ajoutez des règles pour restreindre au moindre privilège.
+                        </template>
+                        <template v-else>
+                            <strong class="text-[#002C52]">{{ rulesForm.rules.length }} règle(s) : accès restreint.</strong>
+                            L'application ne peut appeler QUE les routes listées (les autres renvoient 403).
+                            Les fonctions de la gateway (/api/v1 : whoami, jobs, batch…) restent toujours accessibles.
+                        </template>
+                    </div>
+
+                    <!-- Liste des règles -->
+                    <div v-for="(rule, i) in rulesForm.rules" :key="i" class="rounded-xl border border-input p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-muted-foreground">Règle {{ i + 1 }}</span>
+                            <Button variant="ghost" size="icon" class="text-destructive size-7" @click="removeRule(i)" aria-label="Supprimer la règle">
+                                <Trash2 class="size-3.5" />
+                            </Button>
+                        </div>
+
+                        <!-- Verbes HTTP -->
+                        <div class="space-y-1.5">
+                            <Label class="text-xs">Verbes autorisés</Label>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button v-for="m in HTTP_METHODS" :key="m" type="button"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors"
+                                    :class="rule.methods.includes(m)
+                                        ? 'bg-[#002C52] text-white border-[#002C52]'
+                                        : 'bg-background text-muted-foreground border-input hover:border-[#002C52]'"
+                                    @click="toggleMethod(rule, m)">
+                                    {{ m }}
+                                </button>
+                            </div>
+                            <p v-if="ruleError(i, 'methods')" class="text-xs text-destructive">{{ ruleError(i, 'methods') }}</p>
+                        </div>
+
+                        <!-- Pattern de route -->
+                        <div class="space-y-1.5">
+                            <Label class="text-xs">Motif de route</Label>
+                            <Input v-model="rule.pattern" list="route-patterns"
+                                placeholder="gescom/api/v1/Folders/*/Items/*" class="font-mono text-xs" />
+                            <p v-if="ruleError(i, 'pattern')" class="text-xs text-destructive">{{ ruleError(i, 'pattern') }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Datalist partagée : suggestions issues de la doc API -->
+                    <datalist id="route-patterns">
+                        <option v-for="p in allPatterns" :key="p" :value="p" />
+                    </datalist>
+
+                    <Button variant="outline" size="sm" @click="addRule">
+                        <Plus class="size-3.5" /> Ajouter une règle
+                    </Button>
+
+                    <!-- Aide sur les jokers -->
+                    <p class="text-xs text-muted-foreground">
+                        Jokers : <code class="bg-muted rounded px-1">*</code> = un segment,
+                        <code class="bg-muted rounded px-1">**</code> = le reste du chemin.
+                        Le dossier (FolderId) est implicite : écrivez le chemin tel que l'app l'appelle.
+                    </p>
+                </div>
+
+                <div class="p-5 border-t border-[#E4DFCE] flex items-center justify-end gap-2">
+                    <Button variant="ghost" @click="closeRules">Annuler</Button>
+                    <Button :disabled="rulesForm.processing" @click="saveRules">Enregistrer les règles</Button>
                 </div>
             </div>
         </div>
