@@ -22,6 +22,8 @@ const folderId = ref(props.prefill.folderId ?? null);
 const method = ref(HTTP_METHODS.includes(props.prefill.method) ? props.prefill.method : 'GET');
 const endpoint = ref(props.prefill.endpoint ?? '');
 const bodyText = ref('');
+// Endpoint brut : si coché, aucune réécriture de compatibilité EBP n'est appliquée.
+const rawEndpoint = ref(false);
 
 // Paramètres de query en lignes clé/valeur, amorcés depuis le pré-remplissage.
 const queryRows = reactive(
@@ -208,6 +210,7 @@ async function run(confirmed) {
                 query: buildQuery(),
                 body: isWrite.value ? bodyText.value : null,
                 confirmed,
+                raw: rawEndpoint.value,
             }),
         });
 
@@ -324,6 +327,15 @@ function statusVariant(s) {
                     <p class="text-xs text-muted-foreground">
                         Chemin relatif, sans le host. Le slash de début est optionnel. Choisissez une suggestion ou saisissez librement.
                     </p>
+                    <label class="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+                        <input type="checkbox" v-model="rawEndpoint" class="mt-0.5" />
+                        <span>
+                            Endpoint brut (sans réécriture de compatibilité EBP).
+                            Par défaut, la gateway corrige certains chemins comme une vraie app
+                            (ex. <span class="font-mono">ItemsExtendedQuery</span> →
+                            <span class="font-mono">ItemsExtentedQuery</span>). Cochez pour envoyer le chemin exact.
+                        </span>
+                    </label>
                 </div>
 
                 <!-- Paramètres de query -->
@@ -379,6 +391,13 @@ function statusVariant(s) {
                     <Link2 class="size-4 shrink-0 mt-0.5" />
                     <span class="font-mono">{{ result.method }} {{ result.url }}</span>
                 </div>
+
+                <p v-if="result.rewritten" class="text-xs text-muted-foreground">
+                    Endpoint réécrit pour compatibilité EBP :
+                    <span class="font-mono">{{ result.typedEndpoint }}</span> →
+                    <span class="font-mono text-[#002C52]">{{ result.endpoint }}</span>.
+                    Cochez « endpoint brut » pour envoyer le chemin exact.
+                </p>
 
                 <p v-if="result.error" class="text-sm text-destructive flex items-center gap-2">
                     <AlertTriangle class="size-4 shrink-0" /> {{ result.error }}

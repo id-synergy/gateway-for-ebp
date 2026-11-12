@@ -236,6 +236,55 @@ class EbpTesterTest extends TestCase
                 ->where('prefill.query.Limit', '50'));
     }
 
+    public function test_le_testeur_applique_la_reecriture_de_compatibilite_par_defaut(): void
+    {
+        config(['ebp.gateway.proxy.path_rewrites' => ['#/Items/ItemsExtendedQuery#' => '/Items/ItemsExtentedQuery']]);
+        $account = $this->connectedAccount();
+
+        Http::fake([
+            '*/Items/ItemsExtentedQuery*' => Http::response(['results' => []]),
+        ]);
+
+        $response = $this->actingAs($this->admin())->postJson('/admin/testeur/run', [
+            'ebp_account_id' => $account->id,
+            'method' => 'GET',
+            'endpoint' => 'gescom/api/v1/Folders/405032/Items/ItemsExtendedQuery',
+        ]);
+
+        $response->assertOk()
+            ->assertJson(['ok' => true, 'rewritten' => true])
+            ->assertJsonPath('endpoint', 'gescom/api/v1/Folders/405032/Items/ItemsExtentedQuery')
+            ->assertJsonPath('typedEndpoint', 'gescom/api/v1/Folders/405032/Items/ItemsExtendedQuery');
+
+        // L'appel réel est parti sur l'orthographe attendue par EBP (avec le T).
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'ItemsExtentedQuery'));
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'ItemsExtendedQuery'));
+    }
+
+    public function test_endpoint_brut_desactive_la_reecriture(): void
+    {
+        config(['ebp.gateway.proxy.path_rewrites' => ['#/Items/ItemsExtendedQuery#' => '/Items/ItemsExtentedQuery']]);
+        $account = $this->connectedAccount();
+
+        Http::fake([
+            '*/Items/ItemsExtendedQuery*' => Http::response(['error' => 'not found'], 404),
+        ]);
+
+        $response = $this->actingAs($this->admin())->postJson('/admin/testeur/run', [
+            'ebp_account_id' => $account->id,
+            'method' => 'GET',
+            'endpoint' => 'gescom/api/v1/Folders/405032/Items/ItemsExtendedQuery',
+            'raw' => true,
+        ]);
+
+        $response->assertOk()
+            ->assertJson(['rewritten' => false])
+            ->assertJsonPath('endpoint', 'gescom/api/v1/Folders/405032/Items/ItemsExtendedQuery');
+
+        // Avec raw, le chemin exact (sans le T) est bien celui envoyé.
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'ItemsExtendedQuery'));
+    }
+
     public function test_les_suggestions_exigent_une_connexion(): void
     {
         $this->getJson('/admin/testeur/suggestions')->assertStatus(401);
