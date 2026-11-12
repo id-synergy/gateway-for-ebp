@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminActionController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApiDocController;
+use App\Http\Controllers\Admin\EbpTesterController;
 use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\PairingController;
 use App\Http\Controllers\Admin\ProfileController;
@@ -63,6 +64,8 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::get('/ip', [AdminController::class, 'ip']);
     Route::get('/logs', [AdminController::class, 'logs']);
     Route::get('/logs/{log}', [AdminController::class, 'log'])->name('admin.logs.show');
+    Route::get('/testeur', [AdminController::class, 'testeur'])->name('admin.testeur');
+    Route::post('/testeur/run', [EbpTesterController::class, 'run'])->name('admin.testeur.run');
     Route::get('/jobs', [AdminController::class, 'jobs']);
     Route::get('/jobs/{job:public_id}', [AdminController::class, 'job'])->name('admin.jobs.show');
     Route::get('/supervision', [AdminController::class, 'supervision'])->name('admin.supervision');
