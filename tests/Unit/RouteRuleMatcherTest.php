@@ -201,7 +201,7 @@ class RouteRuleMatcherTest extends TestCase
             $this->rule(['GET'], 'gescom/api/v1/Items/**'),
         ];
 
-        $this->assertTrue($this->matcher->allows($rules, 'GET', 'gescom/api/v1/Items/ItemsExtendedQuery'));
+        $this->assertTrue($this->matcher->allows($rules, 'GET', 'gescom/api/v1/Items/ItemsExtentedQuery'));
         $this->assertTrue($this->matcher->allows($rules, 'GET', 'gescom/api/v1/Clients'));
         $this->assertFalse($this->matcher->allows($rules, 'GET', 'gescom/api/v1/Deals'));
     }

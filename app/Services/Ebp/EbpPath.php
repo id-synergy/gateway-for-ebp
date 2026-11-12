@@ -45,10 +45,10 @@ class EbpPath
     /**
      * Applique les réécritures de compatibilité au chemin avant relai vers EBP.
      *
-     * L'API EBP expose certains endpoints sous une orthographe qui ne correspond pas à sa
-     * propre spec (ex. « ItemsExtentedQuery » au lieu de « ItemsExtendedQuery ») : l'URL
-     * documentée renvoie alors un 404. On corrige ici vers ce qu'EBP attend réellement, à
-     * partir de la table config ebp.gateway.proxy.path_rewrites {motif regex => remplacement}.
+     * Mécanisme générique piloté par la table config ebp.gateway.proxy.path_rewrites
+     * {motif regex => remplacement}, prévu pour corriger une divergence éventuelle entre un
+     * endpoint documenté et celui réellement servi par EBP. La table est vide par défaut :
+     * nos specs et catalogues utilisent déjà l'orthographe réelle d'EBP, donc rien à réécrire.
      */
     public static function applyRewrites(string $path): string
     {
