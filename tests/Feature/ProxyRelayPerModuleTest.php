@@ -76,6 +76,18 @@ class ProxyRelayPerModuleTest extends TestCase
         $this->getJson('/inconnu/api/v1/Truc', $this->auth())->assertStatus(404);
     }
 
+    public function test_l_orthographe_fautive_ebp_des_articles_est_corrigee_avant_relai(): void
+    {
+        // L'app appelle l'endpoint tel que documenté (« ItemsExtendedQuery »), mais l'API EBP
+        // n'accepte que sa faute de frappe « ItemsExtentedQuery ». La gateway doit réécrire.
+        Http::fake(['*' => Http::response(['results' => []], 200)]);
+
+        $this->getJson('/gescom/api/v1/Items/ItemsExtendedQuery', $this->auth())->assertOk();
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/Items/ItemsExtentedQuery')
+            && ! str_contains($r->url(), 'ItemsExtendedQuery'));
+    }
+
     public function test_le_folderid_est_injecte_dans_l_url_quand_absent(): void
     {
         Http::fake(['*/Folders/3691/Clients*' => Http::response(['results' => []])]);
