@@ -358,8 +358,40 @@ class AdminController extends Controller
                 'ip' => $log->ip,
                 'size' => $log->response_size,
                 'params' => $log->params,
+                // Pour le bouton « Rejouer » : identifiants bruts à repasser au testeur.
+                'accountId' => $log->ebp_account_id,
+                'folderId' => $log->ebp_folder_id,
             ],
             'body' => $body,
+            // Le rejeu n'a de sens que si le compte source existe encore.
+            'canReplay' => $log->ebp_account_id !== null && $log->account !== null,
+        ]);
+    }
+
+    /**
+     * Testeur de requêtes EBP : émet de vraies requêtes authentifiées vers EBP (via EbpClient)
+     * et affiche la réponse brute, pour le débogage. Le formulaire peut être pré-rempli par
+     * les query params (bouton « Rejouer » depuis le détail d'un log).
+     */
+    public function testeur(Request $request): Response
+    {
+        return Inertia::render('Admin/Testeur', [
+            'accounts' => EbpAccount::with('folders')->orderBy('label')->get()->map(fn ($a) => [
+                'id' => $a->id,
+                'label' => $a->label,
+                'folders' => $a->folders->map(fn ($f) => [
+                    'id' => $f->id,
+                    'label' => $f->label ? $f->label.' #'.$f->folder_id : $f->folder_id,
+                ])->values(),
+            ]),
+            // Valeurs de pré-remplissage (rejeu). Toutes optionnelles.
+            'prefill' => [
+                'accountId' => $request->integer('account') ?: null,
+                'folderId' => $request->integer('folder') ?: null,
+                'method' => $request->string('method')->upper()->toString() ?: null,
+                'endpoint' => $request->string('endpoint')->toString() ?: null,
+                'query' => $request->has('params') ? (array) $request->input('params') : null,
+            ],
         ]);
     }
 
