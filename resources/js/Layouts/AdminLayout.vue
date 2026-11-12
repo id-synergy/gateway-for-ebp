@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
-    LayoutDashboard, Plug, KeyRound, Users, Network, ScrollText, ListChecks, LogOut, Activity, BookOpen,
+    LayoutDashboard, Plug, KeyRound, Users, Network, ScrollText, ListChecks, LogOut, Activity, BookOpen, FlaskConical,
 } from 'lucide-vue-next';
 import {
     Avatar, AvatarFallback,
@@ -18,6 +18,7 @@ const nav = [
     { label: 'Admins', icon: Users, href: '/admin/admins', key: 'admins' },
     { label: 'IP autorisées', icon: Network, href: '/admin/ip', key: 'ip' },
     { label: 'Logs', icon: ScrollText, href: '/admin/logs', key: 'logs' },
+    { label: 'Testeur EBP', icon: FlaskConical, href: '/admin/testeur', key: 'testeur' },
     { label: 'Jobs', icon: ListChecks, href: '/admin/jobs', key: 'jobs' },
     { label: 'Supervision', icon: Activity, href: '/admin/supervision', key: 'supervision' },
     { label: 'API & doc', icon: BookOpen, href: '/admin/api', key: 'api' },
