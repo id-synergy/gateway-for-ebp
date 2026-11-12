@@ -52,7 +52,9 @@ class EbpProxyController extends Controller
         // UNIQUEMENT pour les endpoints proxy sans dossier (racine du module, .../Folders).
 
         $method = $request->method();
-        $endpoint = $this->withFolder($path, $prefix, $folder);
+        // Réécritures de compatibilité (orthographe fautive côté EBP) avant tout le reste,
+        // pour que cache, journalisation et relai partagent le chemin réellement appelé.
+        $endpoint = EbpPath::applyRewrites($this->withFolder($path, $prefix, $folder));
         $query = $this->forwardableQuery($request);
         $isRead = $method === 'GET';
 
