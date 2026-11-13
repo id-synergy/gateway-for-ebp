@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccountEvent;
+use App\Models\AdminAction;
 use App\Models\AdminAuthEvent;
 use App\Models\AlertLog;
 use App\Models\AppToken;
@@ -257,6 +258,89 @@ class AdminController extends Controller
                 'email' => $i->email,
                 'expiresIn' => $i->expires_at->diffForHumans(),
             ]),
+        ]);
+    }
+
+    /** Nombre de connexions/événements d'auth récents remontés sur la fiche d'un admin. */
+    private const ADMIN_AUTH_EVENTS = 30;
+
+    /** Nombre d'actions d'audit récentes remontées sur la fiche d'un admin. */
+    private const ADMIN_ACTIONS = 30;
+
+    /**
+     * Fiche détail d'un administrateur : profil, ses connexions (admin_auth_events),
+     * ses actions (admin_actions) et ses préférences d'alertes — le tout filtré sur
+     * ce seul utilisateur. Vue complémentaire des pages globales /admin/connexions
+     * et /admin/audit, qui restent en place.
+     */
+    public function admin(User $user): Response
+    {
+        $user->load('notificationPreferences');
+
+        $events = AdminAuthEvent::where('user_id', $user->id)
+            ->orderByDesc('occurred_at')
+            ->limit(self::ADMIN_AUTH_EVENTS)
+            ->get();
+
+        $actions = AdminAction::where('user_id', $user->id)
+            ->orderByDesc('occurred_at')
+            ->limit(self::ADMIN_ACTIONS)
+            ->get();
+
+        $types = AlertType::configurable();
+        $labels = AlertType::labels();
+
+        // Résumé en tête : dernière connexion réussie, nombre de connexions récentes, dernière action.
+        $lastLogin = AdminAuthEvent::where('user_id', $user->id)
+            ->where('event', AdminAuthEvent::EVENT_LOGIN)
+            ->orderByDesc('occurred_at')
+            ->first();
+        $loginCount = AdminAuthEvent::where('user_id', $user->id)
+            ->where('event', AdminAuthEvent::EVENT_LOGIN)
+            ->count();
+
+        return Inertia::render('Admin/AdminDetail', [
+            'admin' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'twoFa' => $user->two_factor_confirmed_at !== null,
+                'defaultContact' => $user->is_default_contact,
+                'active' => $user->is_active,
+                'createdAt' => optional($user->created_at)->format('d/m/Y H:i') ?? '—',
+            ],
+            'summary' => [
+                'lastLoginAt' => optional($lastLogin?->occurred_at)->format('d/m/Y H:i'),
+                'lastLoginAgo' => optional($lastLogin?->occurred_at)->diffForHumans(),
+                'loginCount' => $loginCount,
+                'lastActionLabel' => $actions->first()?->label,
+                'lastActionAt' => optional($actions->first()?->occurred_at)->format('d/m/Y H:i'),
+            ],
+            // Connexions : mêmes types/badges que /admin/connexions.
+            'events' => $events->map(fn (AdminAuthEvent $e) => [
+                'id' => $e->id,
+                'at' => $e->occurred_at->format('d/m/Y H:i:s'),
+                'event' => $e->event,
+                'ip' => $e->ip,
+                'userAgent' => $e->user_agent,
+            ])->values(),
+            // Actions : mêmes libellés que /admin/audit (source unique AuditController::ACTION_LABELS).
+            'actions' => $actions->map(fn (AdminAction $a) => [
+                'id' => $a->id,
+                'at' => $a->occurred_at->format('d/m/Y H:i:s'),
+                'action' => $a->action,
+                'actionLabel' => AuditController::ACTION_LABELS[$a->action] ?? $a->action,
+                'label' => $a->label,
+                'subjectType' => $a->subject_type ? class_basename($a->subject_type) : null,
+                'ip' => $a->ip,
+                'properties' => $a->properties,
+            ])->values(),
+            // Préférences d'alertes de cet admin (toggles réutilisant admin.preferences.toggle).
+            'preferences' => collect($types)->map(fn ($type) => [
+                'type' => $type,
+                'label' => $labels[$type],
+                'enabled' => (bool) optional($user->notificationPreferences->firstWhere('alert_type', $type))->enabled,
+            ])->values(),
         ]);
     }
 
