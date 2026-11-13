@@ -36,4 +36,4 @@ Route::match(
     [EbpProxyController::class, 'handle']
 )
     ->where('path', '(?:'.$rootPattern.')/.*')
-    ->middleware(['api', 'throttle:gateway', 'app.token']);
+    ->middleware(['api', 'block.ip', 'throttle:gateway', 'app.token']);

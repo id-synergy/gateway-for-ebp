@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Models\AllowedIp;
+use App\Services\Security\IpAccessControl;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -28,18 +28,14 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Rate-limit applicatif de la gateway.
-     * IP présente dans allowed_ips -> illimité. Sinon -> gros bridage (429 au dépassement).
+     * IP en status=allowed (ip_entries) -> illimité. Sinon -> gros bridage (429 au dépassement).
      */
     protected function configureRateLimiting(): void
     {
         RateLimiter::for('gateway', function (Request $request) {
-            // IP autorisée -> illimité. En cas d'indisponibilité DB, on bride par défaut (sécurité).
-            try {
-                if (AllowedIp::where('ip', $request->ip())->exists()) {
-                    return Limit::none();
-                }
-            } catch (\Throwable) {
-                // on retombe sur le bridage ci-dessous
+            // IP autorisée -> illimité (lookup mis en cache court via IpAccessControl).
+            if (app(IpAccessControl::class)->isAllowed($request->ip())) {
+                return Limit::none();
             }
 
             return Limit::perMinute((int) config('ebp.gateway.rate_limit_per_min'))
