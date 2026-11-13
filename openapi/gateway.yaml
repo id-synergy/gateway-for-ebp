@@ -82,6 +82,53 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       operationId: gateway-whoami
+  /api/v1/pairing/claim:
+    post:
+      tags:
+      - Santé
+      summary: Échange un code d'appairage contre le jeton d'app
+      description: 'Appairage d''une application : l''app envoie le code à usage unique scanné dans le QR du back-office et reçoit en retour son vrai jeton d''app (`gw_...`) à présenter ensuite en Bearer. Route publique (elle sert à obtenir le jeton), mais fortement bridée (anti-bruteforce) et le code est consommé à la première réclamation réussie.
+
+        '
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - code
+              properties:
+                code:
+                  type: string
+                  maxLength: 64
+                  description: Code d'appairage scanné dans le QR (usage unique).
+      responses:
+        '200':
+          description: Code valide — jeton d'app livré
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Jeton d'app (gw_...) à présenter en Bearer.
+                  app:
+                    nullable: true
+                    type: string
+                    description: Nom de l'application cliente rattachée au jeton.
+        '410':
+          description: Code d'appairage invalide ou expiré (déjà consommé, inconnu ou périmé).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+      operationId: gateway-pairing-claim
   /api/v1/batch:
     post:
       tags:
