@@ -12,6 +12,7 @@ use App\Models\GatewayJob;
 use App\Models\Invitation;
 use App\Models\RequestLog;
 use App\Models\User;
+use App\Services\Alerts\AlertType;
 use App\Services\Apps\RoutePatternCatalog;
 use App\Services\Ebp\QuotaRegulator;
 use Illuminate\Http\JsonResponse;
@@ -91,13 +92,7 @@ class AdminController extends Controller
 
     public function supervision(QuotaRegulator $quota): Response
     {
-        $alertLabels = [
-            'token_refresh_failed' => 'Échec renouvellement token',
-            'logs_purge_failed' => 'Échec purge des logs',
-            'account_expiring' => 'Compte bientôt expiré',
-            'account_connected' => 'Compte EBP connecté',
-            'generic_incident' => 'Incident générique',
-        ];
+        $alertLabels = AlertType::labels();
 
         return Inertia::render('Admin/Supervision', [
             'queue' => [
@@ -225,14 +220,8 @@ class AdminController extends Controller
 
     public function admins(): Response
     {
-        $types = ['token_refresh_failed', 'logs_purge_failed', 'account_expiring', 'account_connected', 'generic_incident'];
-        $labels = [
-            'token_refresh_failed' => 'Échec renouvellement token',
-            'logs_purge_failed' => 'Échec purge des logs',
-            'account_expiring' => 'Compte bientôt expiré',
-            'account_connected' => 'Compte EBP connecté',
-            'generic_incident' => 'Incident générique',
-        ];
+        $types = AlertType::configurable();
+        $labels = AlertType::labels();
 
         $users = User::with('notificationPreferences')->get();
 
