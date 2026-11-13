@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AllowedIp;
 use App\Models\AppToken;
 use App\Models\AppTokenRouteRule;
 use App\Models\EbpAccount;
@@ -105,29 +104,6 @@ class AdminActionController extends Controller
             : "{$count} règle(s) d'accès enregistrée(s) pour le jeton « {$token->name} ».";
 
         return back()->with('success', $message);
-    }
-
-    public function storeIp(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'ip' => 'required|ip|unique:allowed_ips,ip',
-            'label' => 'required|string|max:255',
-        ]);
-
-        AllowedIp::create([
-            'ip' => $data['ip'],
-            'label' => $data['label'],
-            'created_by' => $request->user()->id,
-        ]);
-
-        return back()->with('success', 'IP ajoutée.');
-    }
-
-    public function destroyIp(AllowedIp $ip): RedirectResponse
-    {
-        $ip->delete();
-
-        return back()->with('success', 'IP supprimée.');
     }
 
     public function storeAdmin(Request $request): RedirectResponse

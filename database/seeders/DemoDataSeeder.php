@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\AllowedIp;
 use App\Models\EbpAccount;
 use App\Models\EbpFolder;
 use App\Models\EbpToken;
+use App\Models\IpEntry;
 use App\Models\NotificationPreference;
 use App\Models\RequestLog;
 use App\Models\User;
@@ -57,8 +57,9 @@ class DemoDataSeeder extends Seeder
             $tokens->create('Pilotage', $account, $folder);
         }
 
-        // IP autorisées.
-        AllowedIp::updateOrCreate(['ip' => '203.0.113.10'], ['label' => 'Site exemple', 'created_by' => $admin->id]);
+        // IP : une autorisée (débit illimité), une bloquée (403).
+        IpEntry::updateOrCreate(['ip' => '203.0.113.10'], ['label' => 'Site exemple', 'status' => 'allowed', 'created_by' => $admin->id]);
+        IpEntry::updateOrCreate(['ip' => '198.51.100.66'], ['label' => 'Scan abusif', 'status' => 'blocked', 'created_by' => $admin->id]);
 
         // Quelques logs d'exemple.
         if (RequestLog::count() === 0) {

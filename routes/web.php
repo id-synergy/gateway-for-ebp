@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApiDocController;
 use App\Http\Controllers\Admin\EbpTesterController;
 use App\Http\Controllers\Admin\InvitationController;
+use App\Http\Controllers\Admin\IpController;
 use App\Http\Controllers\Admin\PairingController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
@@ -49,7 +50,10 @@ if (! app()->environment('production')) {
 | Back-office (Inertia + Vue, vraies données)
 |--------------------------------------------------------------------------
 */
-Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
+// block.ip rejette (403) toute IP en liste noire, y compris sur le back-office.
+// Garde-fou : les boucles locales (127.0.0.1, ::1) ne sont JAMAIS bloquées
+// (cf. IpAccessControl::isBlocked), pour ne pas verrouiller l'accès admin.
+Route::prefix('admin')->middleware(['block.ip', 'auth', '2fa'])->group(function () {
     Route::get('/', [AdminController::class, 'dashboard']);
     Route::get('/comptes', [AdminController::class, 'comptes'])->name('admin.comptes.index');
     Route::post('/comptes', [AdminActionController::class, 'storeAccount'])->name('admin.comptes.store');
@@ -61,7 +65,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('/comptes/{account}/manual-token', [EbpOAuthController::class, 'manualExchange'])->name('admin.comptes.manual-token');
     Route::get('/jetons', [AdminController::class, 'jetons']);
     Route::get('/admins', [AdminController::class, 'admins']);
-    Route::get('/ip', [AdminController::class, 'ip']);
+    Route::get('/ip', [IpController::class, 'index'])->name('admin.ip.index');
     Route::get('/logs', [AdminController::class, 'logs']);
     Route::get('/logs/{log}', [AdminController::class, 'log'])->name('admin.logs.show');
     Route::get('/testeur', [AdminController::class, 'testeur'])->name('admin.testeur');
@@ -81,8 +85,9 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('/jetons/{token}/regenerate', [AdminActionController::class, 'regenerateToken'])->name('admin.tokens.regenerate');
     Route::post('/jetons/{token}/pairing', [PairingController::class, 'create'])->name('admin.tokens.pairing');
     Route::put('/jetons/{token}/regles', [AdminActionController::class, 'updateTokenRules'])->name('admin.tokens.rules');
-    Route::post('/ip', [AdminActionController::class, 'storeIp'])->name('admin.ip.store');
-    Route::delete('/ip/{ip}', [AdminActionController::class, 'destroyIp'])->name('admin.ip.destroy');
+    Route::post('/ip', [IpController::class, 'store'])->name('admin.ip.store');
+    Route::patch('/ip/{ip}', [IpController::class, 'update'])->name('admin.ip.update');
+    Route::delete('/ip/{ip}', [IpController::class, 'destroy'])->name('admin.ip.destroy');
     Route::post('/admins', [AdminActionController::class, 'storeAdmin'])->name('admin.admins.store');
     Route::patch('/admins/{user}/toggle', [AdminActionController::class, 'toggleAdmin'])->name('admin.admins.toggle');
     Route::post('/invitations', [InvitationController::class, 'store'])->name('admin.invitations.store');

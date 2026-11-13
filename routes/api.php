@@ -20,9 +20,10 @@ use Illuminate\Support\Facades\Route;
 | tels quels : on reste une passerelle, pas un remplaçant.
 |
 | Rate-limit applicatif (throttle:gateway) : IP autorisées illimitées, reste bridé (429).
+| Blocage applicatif (block.ip) : IP en liste noire rejetées en 403 avant tout traitement.
 | Auth par jeton d'app (app.token) : résout compte EBP + dossier.
 */
-Route::prefix('v1')->middleware('throttle:gateway')->group(function () {
+Route::prefix('v1')->middleware(['block.ip', 'throttle:gateway'])->group(function () {
 
     // Santé — public (sert aussi à vérifier le rate-limit).
     Route::get('/ping', fn () => response()->json(['ok' => true, 'service' => 'ebp-gateway']));
