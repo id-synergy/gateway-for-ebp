@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminActionController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApiDocController;
+use App\Http\Controllers\Admin\ConnexionLogController;
 use App\Http\Controllers\Admin\EbpTesterController;
 use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\IpController;
@@ -53,7 +54,10 @@ if (! app()->environment('production')) {
 // block.ip rejette (403) toute IP en liste noire, y compris sur le back-office.
 // Garde-fou : les boucles locales (127.0.0.1, ::1) ne sont JAMAIS bloquées
 // (cf. IpAccessControl::isBlocked), pour ne pas verrouiller l'accès admin.
-Route::prefix('admin')->middleware(['block.ip', 'auth', '2fa'])->group(function () {
+// track.session (observateur best-effort) est placé AVANT auth : il doit pouvoir
+// constater qu'un admin anciennement connecté revient après expiration de sa session
+// (auth le redirigerait ensuite vers /login). Il n'OBSERVE que, ne bloque jamais.
+Route::prefix('admin')->middleware(['block.ip', 'track.session', 'auth', '2fa'])->group(function () {
     Route::get('/', [AdminController::class, 'dashboard']);
     Route::get('/comptes', [AdminController::class, 'comptes'])->name('admin.comptes.index');
     Route::post('/comptes', [AdminActionController::class, 'storeAccount'])->name('admin.comptes.store');
@@ -65,6 +69,7 @@ Route::prefix('admin')->middleware(['block.ip', 'auth', '2fa'])->group(function 
     Route::post('/comptes/{account}/manual-token', [EbpOAuthController::class, 'manualExchange'])->name('admin.comptes.manual-token');
     Route::get('/jetons', [AdminController::class, 'jetons']);
     Route::get('/admins', [AdminController::class, 'admins']);
+    Route::get('/connexions', [ConnexionLogController::class, 'index'])->name('admin.connexions.index');
     Route::get('/ip', [IpController::class, 'index'])->name('admin.ip.index');
     Route::get('/logs', [AdminController::class, 'logs']);
     Route::get('/logs/{log}', [AdminController::class, 'log'])->name('admin.logs.show');
