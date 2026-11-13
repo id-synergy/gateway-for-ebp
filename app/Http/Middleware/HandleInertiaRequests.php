@@ -37,6 +37,9 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+            // Langue résolue par SetLocale (cookie > navigateur > fallback) : le front
+            // s'en sert pour initialiser vue-i18n dès le premier rendu, sans clignotement.
+            'locale' => app()->getLocale(),
             'auth' => [
                 'user' => $request->user() ? [
                     'name' => $request->user()->name,

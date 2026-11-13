@@ -29,7 +29,7 @@ class EbpAccountConnectedMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $verb = $this->reconnection ? 'reconnecté' : 'connecté';
+        $verb = $this->reconnection ? 'reconnecté / reconnected' : 'connecté / connected';
 
         return new Envelope(
             subject: "[Gateway EBP] Compte {$verb} — {$this->account->label}",

@@ -8,6 +8,7 @@ use App\Http\Middleware\BlockBannedIps;
 use App\Http\Middleware\EnsureTwoFactorEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\TrackAdminSessionExpiry;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -28,7 +29,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // En-têtes de sécurité sur TOUTES les réponses (web, api/v1, proxy EBP racine).
         $middleware->append(SecurityHeaders::class);
 
+        // Le cookie « locale » (préférence d'affichage) n'est pas chiffré : il est posé
+        // et relu côté front comme côté back, et ne contient aucune donnée sensible.
+        $middleware->encryptCookies(except: ['locale']);
+
         $middleware->web(append: [
+            SetLocale::class,
             HandleInertiaRequests::class,
         ]);
 

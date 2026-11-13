@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,8 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Search, ChevronDown, ChevronRight } from 'lucide-vue-next';
+
+const { t } = useI18n();
 
 const props = defineProps({
     actions: { type: Object, default: () => ({ data: [], links: [] }) },
@@ -56,20 +59,20 @@ function go(url) {
 
 <template>
     <AdminLayout current="audit">
-        <template #title>Journal d'actions</template>
+        <template #title>{{ t('audit.title') }}</template>
 
         <CutCard class="mb-4">
             <div class="p-5 flex flex-wrap items-center gap-3">
                 <div class="relative flex-1 min-w-52">
                     <Search class="size-4 absolute left-3 top-3.5 text-muted-foreground" />
-                    <Input v-model="search" class="pl-9" placeholder="Rechercher une ressource ou une IP…" />
+                    <Input v-model="search" class="pl-9" :placeholder="t('audit.searchPlaceholder')" />
                 </div>
                 <select v-if="userOptions.length" v-model="user" class="gw-select h-9 rounded-full border border-input bg-background px-4 text-sm">
-                    <option :value="null">Tous les admins</option>
+                    <option :value="null">{{ t('audit.allAdmins') }}</option>
                     <option v-for="u in userOptions" :key="u.id" :value="u.id">{{ u.name }}</option>
                 </select>
                 <select v-model="action" class="gw-select h-9 rounded-full border border-input bg-background px-4 text-sm">
-                    <option value="">Toutes les actions</option>
+                    <option value="">{{ t('audit.allActions') }}</option>
                     <option v-for="o in actionOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
             </div>
@@ -80,16 +83,16 @@ function go(url) {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Horodatage</TableHead>
-                            <TableHead>Admin</TableHead>
-                            <TableHead>Action</TableHead>
-                            <TableHead>Ressource</TableHead>
-                            <TableHead>IP</TableHead>
-                            <TableHead class="text-right">Détails</TableHead>
+                            <TableHead>{{ t('audit.columns.timestamp') }}</TableHead>
+                            <TableHead>{{ t('audit.columns.admin') }}</TableHead>
+                            <TableHead>{{ t('audit.columns.action') }}</TableHead>
+                            <TableHead>{{ t('audit.columns.resource') }}</TableHead>
+                            <TableHead>{{ t('audit.columns.ip') }}</TableHead>
+                            <TableHead class="text-right">{{ t('audit.columns.details') }}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow v-if="!actions.data.length"><TableCell colspan="6" class="text-muted-foreground text-center py-6">Aucune action ne correspond.</TableCell></TableRow>
+                        <TableRow v-if="!actions.data.length"><TableCell colspan="6" class="text-muted-foreground text-center py-6">{{ t('audit.empty') }}</TableCell></TableRow>
                         <template v-for="row in actions.data" :key="row.id">
                             <TableRow>
                                 <TableCell class="text-muted-foreground whitespace-nowrap">{{ row.at }}</TableCell>
@@ -108,7 +111,7 @@ function go(url) {
                                 <TableCell class="text-right">
                                     <Button v-if="hasDetails(row)" size="sm" variant="ghost" class="gap-1" @click="toggle(row.id)">
                                         <component :is="expanded.has(row.id) ? ChevronDown : ChevronRight" class="size-4" />
-                                        {{ expanded.has(row.id) ? 'Masquer' : 'Voir' }}
+                                        {{ expanded.has(row.id) ? t('audit.hide') : t('audit.show') }}
                                     </Button>
                                     <span v-else class="text-muted-foreground text-xs">—</span>
                                 </TableCell>
@@ -128,7 +131,7 @@ function go(url) {
                 </Table>
 
                 <div v-if="actions.links && actions.links.length > 3" class="flex items-center justify-between mt-4 pt-4 border-t border-border">
-                    <span class="text-xs text-muted-foreground">{{ actions.total }} action(s)</span>
+                    <span class="text-xs text-muted-foreground">{{ t('audit.footer', { n: actions.total }) }}</span>
                     <div class="flex gap-1">
                         <Button v-for="(link, i) in actions.links" :key="i" size="sm"
                                 :variant="link.active ? 'default' : 'outline'"
@@ -136,7 +139,7 @@ function go(url) {
                                 @click="go(link.url)" v-html="link.label" />
                     </div>
                 </div>
-                <p v-else class="text-xs text-muted-foreground mt-4">{{ actions.total }} action(s).</p>
+                <p v-else class="text-xs text-muted-foreground mt-4">{{ t('audit.footer', { n: actions.total }) }}</p>
             </div>
         </CutCard>
     </AdminLayout>

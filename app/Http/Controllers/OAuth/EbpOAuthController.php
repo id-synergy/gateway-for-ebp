@@ -71,8 +71,8 @@ class EbpOAuthController extends Controller
         // Le portail EBP renvoie error=... quand l'utilisateur refuse ou qu'une erreur survient.
         if ($error = (string) $request->query('error')) {
             $message = $error === 'access_denied'
-                ? 'Autorisation refusée sur le portail EBP.'
-                : "Erreur du portail EBP : {$error}.";
+                ? __('messages.flash.oauth_access_denied')
+                : __('messages.flash.oauth_portal_error', ['error' => $error]);
 
             $this->events->denied($account, $error);
 
@@ -80,7 +80,7 @@ class EbpOAuthController extends Controller
         }
 
         if ($code === '') {
-            return redirect($return)->with('error', "Code d'autorisation manquant.");
+            return redirect($return)->with('error', __('messages.flash.authorization_code_missing'));
         }
 
         return $this->finishConnection($account, $code, $return);
@@ -101,18 +101,18 @@ class EbpOAuthController extends Controller
 
         $raw = trim((string) $request->input('callback'));
         if ($raw === '') {
-            return redirect($return)->with('error', 'Collez le retour EBP (URL complète ou code).');
+            return redirect($return)->with('error', __('messages.flash.paste_ebp_return'));
         }
 
         [$code, $state] = $this->parseCallbackInput($raw);
 
         if ($code === '') {
-            return redirect($return)->with('error', 'Impossible de trouver le code dans ce que vous avez collé.');
+            return redirect($return)->with('error', __('messages.flash.code_not_found_in_paste'));
         }
 
         // Le portail a pu renvoyer une erreur dans l'URL collée (refus, etc.).
         if ($code === null) {
-            return redirect($return)->with('error', 'Le retour EBP collé contient une erreur, pas de code.');
+            return redirect($return)->with('error', __('messages.flash.ebp_return_contains_error'));
         }
 
         // Vérif anti-CSRF tolérante : si un state est en session (même navigateur que le
@@ -120,7 +120,7 @@ class EbpOAuthController extends Controller
         // c'est l'admin qui agit volontairement.
         $sessionState = $request->session()->pull('ebp_oauth_state');
         if ($sessionState !== null && $state !== null && $state !== '' && $state !== $sessionState) {
-            return redirect($return)->with('error', 'Le state ne correspond pas à la session. Relancez « Reconnecter ».');
+            return redirect($return)->with('error', __('messages.flash.state_mismatch'));
         }
         $request->session()->forget('ebp_oauth_account');
 
@@ -190,7 +190,7 @@ class EbpOAuthController extends Controller
             ]);
         }
 
-        return redirect($return)->with('success', "Compte EBP « {$account->label} » connecté.");
+        return redirect($return)->with('success', __('messages.flash.account_connected', ['label' => $account->label]));
     }
 
     /**
@@ -203,11 +203,11 @@ class EbpOAuthController extends Controller
         $r = strtolower($raw);
 
         return match (true) {
-            str_contains($r, 'invalid_grant') => 'Code d\'autorisation invalide ou expiré. Le code EBP n\'est valable que quelques instants et à usage unique : relancez « Reconnecter » et collez le retour aussitôt.',
-            str_contains($r, 'redirect_uri') && (str_contains($r, 'mismatch') || str_contains($r, 'invalid')) => 'Le redirect_uri ne correspond pas à celui autorisé chez EBP. Vérifiez qu\'il est identique au caractère près (mode de redirection du compte / EBP_LOCALHOST_REDIRECT).',
-            str_contains($r, 'invalid_client') || str_contains($r, 'unauthorized_client') => 'ClientId ou ClientSecret EBP refusé. Vérifiez les identifiants du compte dans « Modifier ».',
-            str_contains($r, 'invalid_scope') => 'Portées (scope) refusées par EBP. Vérifiez la configuration du scope (openid profile offline_access).',
-            default => 'Connexion EBP échouée : '.$raw,
+            str_contains($r, 'invalid_grant') => __('messages.flash.oauth_invalid_grant'),
+            str_contains($r, 'redirect_uri') && (str_contains($r, 'mismatch') || str_contains($r, 'invalid')) => __('messages.flash.oauth_redirect_uri'),
+            str_contains($r, 'invalid_client') || str_contains($r, 'unauthorized_client') => __('messages.flash.oauth_invalid_client'),
+            str_contains($r, 'invalid_scope') => __('messages.flash.oauth_invalid_scope'),
+            default => __('messages.flash.oauth_exchange_failed', ['error' => $raw]),
         };
     }
 }

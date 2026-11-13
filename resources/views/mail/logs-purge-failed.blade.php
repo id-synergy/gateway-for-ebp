@@ -1,7 +1,7 @@
 <x-mail::message>
 # Purge automatique des logs échouée
 
-@include('mail.partials.alert-banner', ['level' => 'danger', 'label' => 'Incident — maintenance des logs'])
+@include('mail.partials.alert-banner', ['level' => 'danger', 'label' => 'Incident — maintenance des logs', 'labelEn' => 'Incident — log maintenance'])
 
 La tâche planifiée de purge des logs et résultats de jobs au-delà de la rétention a **échoué**.
 
@@ -16,6 +16,19 @@ Vérifiez l'espace disque, puis relancez la purge :
 php artisan ebp:logs:purge
 </x-mail::panel>
 
-Merci,<br>
+---
+
+# Automatic log purge failed
+
+The scheduled task that purges logs and job results beyond retention has **failed**.
+
+- **Stage:** {{ $stage }}
+- **Reason:** {{ $errorMessage }}
+
+Without the purge, the disk space taken up by response bodies and job results keeps growing, which may fill up the server.
+
+Check the disk space, then run the purge again (see the command above).
+
+Merci / Thank you,<br>
 Gateway API EBP
 </x-mail::message>
