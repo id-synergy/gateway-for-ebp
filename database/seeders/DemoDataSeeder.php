@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AdminAction;
 use App\Models\AdminAuthEvent;
 use App\Models\EbpAccount;
 use App\Models\EbpFolder;
@@ -59,8 +60,33 @@ class DemoDataSeeder extends Seeder
         }
 
         // IP : une autorisée (débit illimité), une bloquée (403).
-        IpEntry::updateOrCreate(['ip' => '203.0.113.10'], ['label' => 'Site exemple', 'status' => 'allowed', 'created_by' => $admin->id]);
-        IpEntry::updateOrCreate(['ip' => '198.51.100.66'], ['label' => 'Scan abusif', 'status' => 'blocked', 'created_by' => $admin->id]);
+        $ipAllowed = IpEntry::updateOrCreate(['ip' => '203.0.113.10'], ['label' => 'Site exemple', 'status' => 'allowed', 'created_by' => $admin->id]);
+        $ipBlocked = IpEntry::updateOrCreate(['ip' => '198.51.100.66'], ['label' => 'Scan abusif', 'status' => 'blocked', 'created_by' => $admin->id]);
+
+        // Journal d'actions (audit trail) : quelques actions d'admin d'exemple (démo).
+        // Aucun secret n'y figure jamais (label/id et contexte utile seulement).
+        if (AdminAction::count() === 0) {
+            $firstToken = $account->appTokens()->first();
+            $samples = [
+                [$admin, 'account.created', $account, $account->label, ['environment' => $account->environment], '203.0.113.10', 240],
+                [$admin, 'token.created', $firstToken, $firstToken?->name ?? 'Logiciel tickets', ['account' => $account->label], '203.0.113.10', 230],
+                [$admin, 'ip.blocked', $ipBlocked, '198.51.100.66 (Scan abusif)', [], '203.0.113.10', 120],
+                [$admin2, 'token.regenerated', $firstToken, $firstToken?->name ?? 'Logiciel tickets', ['account' => $account->label], '203.0.113.11', 70],
+                [$admin, 'account.deleted', null, 'Ancien client — démo', ['environment' => 'preproduction'], '203.0.113.10', 30],
+            ];
+            foreach ($samples as [$user, $action, $subject, $label, $props, $ip, $minutesAgo]) {
+                AdminAction::create([
+                    'user_id' => $user?->id,
+                    'action' => $action,
+                    'subject_type' => $subject?->getMorphClass(),
+                    'subject_id' => $subject?->getKey(),
+                    'label' => $label,
+                    'properties' => $props ?: null,
+                    'ip' => $ip,
+                    'occurred_at' => now()->subMinutes($minutesAgo),
+                ]);
+            }
+        }
 
         // Journal de connexion des admins : quelques événements d'exemple (démo).
         if (AdminAuthEvent::count() === 0) {

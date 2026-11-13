@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminActionController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApiDocController;
+use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\ConnexionLogController;
 use App\Http\Controllers\Admin\EbpTesterController;
 use App\Http\Controllers\Admin\InvitationController;
@@ -70,6 +71,7 @@ Route::prefix('admin')->middleware(['block.ip', 'track.session', 'auth', '2fa'])
     Route::get('/jetons', [AdminController::class, 'jetons']);
     Route::get('/admins', [AdminController::class, 'admins']);
     Route::get('/connexions', [ConnexionLogController::class, 'index'])->name('admin.connexions.index');
+    Route::get('/audit', [AuditController::class, 'index'])->name('admin.audit.index');
     Route::get('/ip', [IpController::class, 'index'])->name('admin.ip.index');
     Route::get('/logs', [AdminController::class, 'logs']);
     Route::get('/logs/{log}', [AdminController::class, 'log'])->name('admin.logs.show');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\IpEntry;
 use App\Models\RequestLog;
+use App\Services\Audit\AdminActionLogger;
 use App\Services\Security\IpAccessControl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,10 @@ use Inertia\Response;
  */
 class IpController extends Controller
 {
-    public function __construct(private IpAccessControl $ipAccess) {}
+    public function __construct(
+        private IpAccessControl $ipAccess,
+        private AdminActionLogger $audit,
+    ) {}
 
     public function index(): Response
     {
@@ -91,6 +95,7 @@ class IpController extends Controller
         $entry->save();
 
         $this->ipAccess->forget($entry->ip);
+        $this->auditStatus($entry);
 
         return back()->with('success', $this->message($entry));
     }
@@ -115,6 +120,9 @@ class IpController extends Controller
         $ip->save();
 
         $this->ipAccess->forget($ip->ip);
+        if (array_key_exists('status', $data)) {
+            $this->auditStatus($ip);
+        }
 
         return back()->with('success', $this->message($ip));
     }
@@ -131,14 +139,29 @@ class IpController extends Controller
             $ip->status = IpEntry::STATUS_NEUTRAL;
             $ip->save();
             $message = "L'IP {$ipAddr} n'est plus classée (son libellé est conservé).";
+            $this->audit->log('ip.unclassified', $ip, $ip->label ? "{$ipAddr} ({$ip->label})" : $ipAddr);
         } else {
             $ip->delete();
             $message = "L'IP {$ipAddr} a été retirée.";
+            $this->audit->log('ip.removed', null, $ipAddr);
         }
 
         $this->ipAccess->forget($ipAddr);
 
         return back()->with('success', $message);
+    }
+
+    /** Trace le classement d'une IP selon son statut résultant (bloquée / autorisée / neutre). */
+    private function auditStatus(IpEntry $entry): void
+    {
+        $action = match ($entry->status) {
+            IpEntry::STATUS_BLOCKED => 'ip.blocked',
+            IpEntry::STATUS_ALLOWED => 'ip.allowed',
+            default => 'ip.unclassified',
+        };
+        $label = $entry->label ? "{$entry->ip} ({$entry->label})" : $entry->ip;
+
+        $this->audit->log($action, $entry, $label);
     }
 
     private function message(IpEntry $entry): string
