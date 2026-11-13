@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
-    LayoutDashboard, Plug, KeyRound, Users, Network, ScrollText, ListChecks, LogOut, Activity, BookOpen, FlaskConical, LogIn,
+    LayoutDashboard, Plug, KeyRound, Users, Network, ScrollText, ListChecks, LogOut, Activity, BookOpen, FlaskConical, LogIn, History,
 } from 'lucide-vue-next';
 import {
     Avatar, AvatarFallback,
@@ -17,6 +17,7 @@ const nav = [
     { label: "Jetons d'apps", icon: KeyRound, href: '/admin/jetons', key: 'jetons' },
     { label: 'Admins', icon: Users, href: '/admin/admins', key: 'admins' },
     { label: 'Connexions', icon: LogIn, href: '/admin/connexions', key: 'connexions' },
+    { label: 'Audit', icon: History, href: '/admin/audit', key: 'audit' },
     { label: 'IP', icon: Network, href: '/admin/ip', key: 'ip' },
     { label: 'Logs', icon: ScrollText, href: '/admin/logs', key: 'logs' },
     { label: 'Testeur EBP', icon: FlaskConical, href: '/admin/testeur', key: 'testeur' },
