@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AppToken;
 use App\Models\PairingCode;
+use App\Services\Audit\AdminActionLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -25,6 +26,8 @@ class PairingController extends Controller
 {
     /** Durée de vie d'un code d'appairage. */
     private const TTL_MINUTES = 10;
+
+    public function __construct(private AdminActionLogger $audit) {}
 
     /** POST /admin/jetons/{token}/pairing — génère un code d'appairage (mot de passe requis). */
     public function create(Request $request, AppToken $token): JsonResponse
@@ -66,6 +69,9 @@ class PairingController extends Controller
             'created_by' => $request->user()->id,
             'expires_at' => now()->addMinutes(self::TTL_MINUTES),
         ]);
+
+        // On trace l'appairage (partage du jeton à un appareil), JAMAIS le jeton ni le code en clair.
+        $this->audit->log('token.paired', $token, $token->name, ['account' => $token->account?->label]);
 
         return response()->json([
             'endpoint' => rtrim(url('/'), '/'),
