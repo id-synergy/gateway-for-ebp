@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\InvitationMail;
 use App\Models\Invitation;
 use App\Models\User;
+use App\Services\Audit\AdminActionLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -18,6 +19,8 @@ class InvitationController extends Controller
 {
     /** Durée de validité d'une invitation. */
     private const TTL_HOURS = 24;
+
+    public function __construct(private AdminActionLogger $audit) {}
 
     public function store(Request $request): RedirectResponse
     {
@@ -49,12 +52,18 @@ class InvitationController extends Controller
 
         Mail::to($invitation->email)->send(new InvitationMail($invitation, $acceptUrl));
 
+        // On loge le destinataire, JAMAIS le token d'invitation.
+        $this->audit->log('invitation.created', $invitation, $invitation->email, ['name' => $invitation->name]);
+
         return back()->with('success', "Invitation envoyée à {$invitation->email}.");
     }
 
     public function destroy(Invitation $invitation): RedirectResponse
     {
+        $email = $invitation->email;
         $invitation->delete();
+
+        $this->audit->log('invitation.revoked', null, $email);
 
         return back()->with('success', 'Invitation révoquée.');
     }

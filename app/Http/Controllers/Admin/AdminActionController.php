@@ -11,6 +11,7 @@ use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Services\Accounts\AccountEventLogger;
 use App\Services\Apps\AppTokenService;
+use App\Services\Audit\AdminActionLogger;
 use App\Services\Ebp\EbpFolderDiscovery;
 use App\Services\Ebp\GatewayCache;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +27,7 @@ class AdminActionController extends Controller
     public function __construct(
         protected AppTokenService $tokens,
         protected AccountEventLogger $events,
+        protected AdminActionLogger $audit,
     ) {}
 
     public function storeToken(Request $request): RedirectResponse
@@ -39,8 +41,10 @@ class AdminActionController extends Controller
         $account = EbpAccount::findOrFail($data['ebp_account_id']);
         $folder = ! empty($data['default_folder_id']) ? EbpFolder::find($data['default_folder_id']) : null;
 
-        [, $plain] = $this->tokens->create($data['name'], $account, $folder);
+        [$token, $plain] = $this->tokens->create($data['name'], $account, $folder);
         $this->events->tokenCreated($account, $data['name']);
+        // Audit : on loge le nom et le compte, JAMAIS la clé en clair.
+        $this->audit->log('token.created', $token, $data['name'], ['account' => $account->label]);
 
         // Le jeton en clair n'est montré qu'une fois, via le flash.
         return back()->with('newToken', $plain);
@@ -50,6 +54,7 @@ class AdminActionController extends Controller
     {
         $this->tokens->revoke($token);
         $this->events->tokenRevoked($token->account, $token->name);
+        $this->audit->log('token.revoked', $token, $token->name, ['account' => $token->account?->label]);
 
         return back()->with('success', 'Jeton révoqué.');
     }
@@ -63,6 +68,8 @@ class AdminActionController extends Controller
 
         $plain = $this->tokens->regenerate($token);
         $this->events->tokenRegenerated($token->account, $token->name);
+        // On loge « clé régénérée », JAMAIS la nouvelle clé.
+        $this->audit->log('token.regenerated', $token, $token->name, ['account' => $token->account?->label]);
 
         // Le nouveau jeton en clair n'est montré qu'une fois, via le flash.
         return back()->with('newToken', $plain);
@@ -103,6 +110,8 @@ class AdminActionController extends Controller
             ? "Règles supprimées : le jeton « {$token->name} » a de nouveau accès à tout le périmètre EBP."
             : "{$count} règle(s) d'accès enregistrée(s) pour le jeton « {$token->name} ».";
 
+        $this->audit->log('token.rules_updated', $token, $token->name, ['rules_count' => $count]);
+
         return back()->with('success', $message);
     }
 
@@ -115,13 +124,16 @@ class AdminActionController extends Controller
             'is_default_contact' => 'boolean',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'is_default_contact' => $data['is_default_contact'] ?? false,
             'is_active' => true,
         ]);
+
+        // On loge le nom et l'e-mail, JAMAIS le mot de passe.
+        $this->audit->log('admin.created', $user, $user->name, ['email' => $user->email]);
 
         return back()->with('success', 'Admin créé.');
     }
@@ -134,6 +146,13 @@ class AdminActionController extends Controller
         }
 
         $user->update(['is_active' => ! $user->is_active]);
+
+        $this->audit->log(
+            $user->is_active ? 'admin.reactivated' : 'admin.deactivated',
+            $user,
+            $user->name,
+            ['email' => $user->email],
+        );
 
         return back()->with('success', $user->is_active ? 'Admin réactivé.' : 'Admin désactivé.');
     }
@@ -165,7 +184,7 @@ class AdminActionController extends Controller
             'environment' => 'required|in:production,preproduction,demo',
         ]);
 
-        EbpAccount::create([
+        $account = EbpAccount::create([
             'label' => $data['label'],
             'client_id' => $data['client_id'],
             'client_secret' => $data['client_secret'],
@@ -176,6 +195,9 @@ class AdminActionController extends Controller
             'status' => 'disconnected',
             'is_active' => true,
         ]);
+
+        // On loge le label et l'environnement, JAMAIS les credentials (client_secret, clés d'abonnement).
+        $this->audit->log('account.created', $account, $account->label, ['environment' => $account->environment]);
 
         return back()->with('success', 'Compte EBP créé. Connectez-le pour initier le flux OAuth.');
     }
@@ -220,12 +242,28 @@ class AdminActionController extends Controller
         }
         $account->update($update);
 
+        // Audit : on liste les champs touchés mais on masque toujours les credentials
+        //  (on indique seulement qu'un secret a changé, jamais sa valeur).
+        $secretFields = ['client_id', 'client_secret', 'subscription_key_primary', 'subscription_key_secondary'];
+        $changed = array_keys($update);
+        $credentialsChanged = array_values(array_intersect($changed, $secretFields));
+        $props = ['fields' => array_values(array_diff($changed, $secretFields))];
+        if ($credentialsChanged) {
+            $props['credentials_changed'] = $credentialsChanged; // noms des champs uniquement
+        }
+        $this->audit->log('account.updated', $account, $account->label, $props);
+
         return back()->with('success', 'Compte EBP mis à jour.');
     }
 
     public function destroyAccount(EbpAccount $account): RedirectResponse
     {
+        // Label figé AVANT suppression (le subject disparaît avec la ligne).
+        $label = $account->label;
+        $environment = $account->environment;
         $account->delete();
+
+        $this->audit->log('account.deleted', null, $label, ['environment' => $environment]);
 
         return to_route('admin.comptes.index')->with('success', 'Compte EBP supprimé.');
     }
@@ -238,6 +276,7 @@ class AdminActionController extends Controller
 
         try {
             $count = $discovery->sync($account);
+            $this->audit->log('account.folders_synced', $account, $account->label, ['count' => $count]);
 
             return back()->with('success', "{$count} dossier(s) synchronisé(s) depuis EBP.");
         } catch (\Throwable $e) {
@@ -250,6 +289,7 @@ class AdminActionController extends Controller
     {
         $cache->flushAccount($account);
         $this->events->cacheCleared($account);
+        $this->audit->log('cache.cleared_account', $account, $account->label);
 
         return back()->with('success', "Cache de lecture du compte « {$account->label} » vidé.");
     }
@@ -261,6 +301,7 @@ class AdminActionController extends Controller
 
         // Purge globale : tracée dans le journal de chaque compte.
         EbpAccount::each(fn (EbpAccount $account) => $this->events->cacheCleared($account, global: true));
+        $this->audit->log('cache.cleared_all', null, 'Tout le cache de lecture');
 
         return back()->with('success', 'Tout le cache de lecture a été vidé.');
     }
