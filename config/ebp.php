@@ -216,6 +216,54 @@ return [
     */
     'security' => [
         'enforce_2fa' => (bool) env('GATEWAY_ENFORCE_2FA', false),
+
+        /*
+        |----------------------------------------------------------------------
+        | En-têtes HTTP de sécurité (middleware SecurityHeaders)
+        |----------------------------------------------------------------------
+        | Posés sur TOUTES les réponses (back-office, /api/v1, proxy EBP racine).
+        | Les en-têtes s'ajoutent, ils n'écrasent rien : un contrôleur qui fixe
+        | déjà l'un d'eux garde la main (le middleware ne remplace pas l'existant).
+        */
+        'headers' => [
+            // HSTS : posé UNIQUEMENT sur une requête HTTPS (jamais en clair, sinon
+            // on force le navigateur à refuser le site sur un environnement HTTP).
+            'hsts_max_age' => (int) env('SECURITY_HSTS_MAX_AGE', 31536000), // 1 an
+            'hsts_include_subdomains' => filter_var(env('SECURITY_HSTS_INCLUDE_SUBDOMAINS', true), FILTER_VALIDATE_BOOLEAN),
+            'hsts_preload' => filter_var(env('SECURITY_HSTS_PRELOAD', false), FILTER_VALIDATE_BOOLEAN),
+
+            'frame_options' => env('SECURITY_FRAME_OPTIONS', 'DENY'),
+            'referrer_policy' => env('SECURITY_REFERRER_POLICY', 'strict-origin-when-cross-origin'),
+            'permissions_policy' => env('SECURITY_PERMISSIONS_POLICY', 'camera=(), microphone=(), geolocation=()'),
+
+            /*
+            | Content-Security-Policy
+            | ------------------------
+            | Assets servis en statique sous /build (Vite) : CSS, JS et polices
+            | Instrument Sans (Bunny téléchargées au build, donc locales) sont tous
+            | en 'self'. Vue + Inertia + shadcn-vue posent des styles inline sur les
+            | éléments (positionnement de popovers/tooltips) : style-src a besoin de
+            | 'unsafe-inline'. script-src reste en 'self' strict (aucun script inline
+            | n'est injecté en prod — build Vite externe).
+            |
+            | REPORT-ONLY : activable par env pour déployer la CSP sans rien bloquer
+            | (le navigateur signale les violations sans les appliquer), le temps de
+            | valider en prod, puis basculer en mode bloquant (SECURITY_CSP_REPORT_ONLY=false).
+            */
+            'csp_enabled' => filter_var(env('SECURITY_CSP_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+            'csp_report_only' => filter_var(env('SECURITY_CSP_REPORT_ONLY', false), FILTER_VALIDATE_BOOLEAN),
+            'csp' => env('SECURITY_CSP', implode('; ', [
+                "default-src 'self'",
+                "img-src 'self' data:",
+                "font-src 'self' data:",
+                "style-src 'self' 'unsafe-inline'",
+                "script-src 'self'",
+                "connect-src 'self'",
+                "frame-ancestors 'none'",
+                "base-uri 'self'",
+                "form-action 'self'",
+            ])),
+        ],
     ],
 
 ];
