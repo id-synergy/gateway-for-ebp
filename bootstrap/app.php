@@ -7,6 +7,7 @@ use App\Http\Middleware\AuthenticateAppToken;
 use App\Http\Middleware\BlockBannedIps;
 use App\Http\Middleware\EnsureTwoFactorEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackAdminSessionExpiry;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -24,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
         then: fn () => Route::group([], base_path('routes/mirror.php')),
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // En-têtes de sécurité sur TOUTES les réponses (web, api/v1, proxy EBP racine).
+        $middleware->append(SecurityHeaders::class);
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
