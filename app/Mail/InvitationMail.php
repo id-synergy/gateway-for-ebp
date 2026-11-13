@@ -25,7 +25,7 @@ class InvitationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Invitation à la Gateway EBP',
+            subject: 'Invitation — Gateway EBP',
         );
     }
 

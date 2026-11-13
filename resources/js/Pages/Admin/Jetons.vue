@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { router, useForm, usePage } from '@inertiajs/vue3';
 import QRCode from 'qrcode';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
@@ -21,6 +22,8 @@ const props = defineProps({
     endpoint: { type: String, default: '' },
     routeCatalog: { type: Array, default: () => [] },
 });
+
+const { t } = useI18n();
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -44,7 +47,7 @@ function submit() {
     form.post('/admin/jetons', { onSuccess: () => { form.reset(); showForm.value = false; } });
 }
 function revoke(id) {
-    if (confirm('Révoquer ce jeton ? Les apps qui l\'utilisent perdront l\'accès.')) {
+    if (confirm(t('jetons.confirmRevoke'))) {
         router.delete(`/admin/jetons/${id}`);
     }
 }
@@ -85,7 +88,7 @@ async function startPairing() {
         });
         if (res.status === 422) {
             const d = await res.json();
-            pairing.value.error = d.message || 'Mot de passe incorrect.';
+            pairing.value.error = d.message || t('jetons.pairing.wrongPassword');
             return;
         }
         // Jeton créé avant le stockage chiffré : il faut le régénérer une fois.
@@ -116,7 +119,7 @@ async function startPairing() {
             if (countdown.value <= 0) { clearInterval(countdownTimer); countdownTimer = null; }
         }, 1000);
     } catch {
-        pairing.value.error = "Échec de la génération du code d'appairage.";
+        pairing.value.error = t('jetons.pairing.generationFailed');
     } finally {
         pairing.value.busy = false;
     }
@@ -158,23 +161,16 @@ async function copyToken(value) {
         copied.value = true;
         setTimeout(() => { copied.value = false; }, 1600);
     } else {
-        window.prompt('Copiez le jeton manuellement :', value);
+        window.prompt(t('jetons.copyManually'), value);
     }
 }
 
 // Régénération : double confirmation, car l'ancienne clé cesse immédiatement de fonctionner.
 function regenerate(token) {
-    const first = window.confirm(
-        `Régénérer la clé du jeton « ${token.name} » ?\n\n`
-        + `ATTENTION : l'application qui utilise la clé actuelle ne pourra plus accéder à EBP `
-        + `tant qu'elle n'aura pas reçu la nouvelle clé.`,
-    );
+    const first = window.confirm(t('jetons.confirmRegenerate1', { name: token.name }));
     if (!first) return;
 
-    const second = window.confirm(
-        `Êtes-vous sûr ? Cette action est IRRÉVERSIBLE.\n\n`
-        + `L'ancienne clé sera définitivement invalidée. La nouvelle clé ne sera affichée qu'une seule fois.`,
-    );
+    const second = window.confirm(t('jetons.confirmRegenerate2'));
     if (!second) return;
 
     router.post(`/admin/jetons/${token.id}/regenerate`, {}, { preserveScroll: true });
@@ -221,28 +217,27 @@ function ruleError(index, field) {
 
 <template>
     <AdminLayout current="jetons">
-        <template #title>Jetons d'apps</template>
+        <template #title>{{ t('nav.jetons') }}</template>
         <template #actions>
-            <Button size="lg" @click="showForm = !showForm"><Plus class="size-5" /> Créer un jeton</Button>
+            <Button size="lg" @click="showForm = !showForm"><Plus class="size-5" /> {{ t('jetons.create') }}</Button>
         </template>
 
         <!-- Jeton fraîchement créé (montré une seule fois) -->
         <CutCard v-if="page.props.flash?.newToken" class="mb-4 border-2 border-primary">
             <div class="p-5">
-                <p class="text-sm font-medium text-[#002C52] mb-2">Nouveau jeton (copiez-le maintenant, il ne sera plus affiché) :</p>
+                <p class="text-sm font-medium text-[#002C52] mb-2">{{ t('jetons.newToken.label') }}</p>
                 <div class="flex items-center gap-2">
                     <code class="flex-1 text-xs bg-muted rounded-lg px-3 py-2.5 break-all">{{ page.props.flash.newToken }}</code>
-                    <Button variant="outline" size="icon" :aria-label="copied ? 'Copié' : 'Copier'" @click="copyToken(page.props.flash.newToken)">
+                    <Button variant="outline" size="icon" :aria-label="copied ? t('common.copied') : t('common.copy')" @click="copyToken(page.props.flash.newToken)">
                         <Check v-if="copied" class="size-4 text-[#1D9E75]" />
                         <Copy v-else class="size-4" />
                     </Button>
                 </div>
-                <p v-if="copied" class="text-xs text-[#1D9E75] mt-1.5">Jeton copié dans le presse-papiers.</p>
+                <p v-if="copied" class="text-xs text-[#1D9E75] mt-1.5">{{ t('jetons.newToken.copied') }}</p>
 
                 <p class="text-xs text-muted-foreground mt-3">
-                    Pour connecter une application par QR code, utilisez le bouton
-                    <strong class="text-[#002C52]">« Connecter »</strong> sur la ligne du jeton : il génère
-                    un code d'appairage temporaire, sans jamais exposer le jeton dans le QR.
+                    {{ t('jetons.newToken.hintBefore') }}
+                    <strong class="text-[#002C52]">{{ t('jetons.connect') }}</strong> {{ t('jetons.newToken.hintAfter') }}
                 </p>
             </div>
         </CutCard>
@@ -250,37 +245,37 @@ function ruleError(index, field) {
         <!-- Formulaire de création -->
         <CutCard v-if="showForm" class="mb-4">
             <div class="p-5 space-y-4">
-                <h3 class="text-base font-medium text-[#002C52]">Nouveau jeton d'application</h3>
+                <h3 class="text-base font-medium text-[#002C52]">{{ t('jetons.form.title') }}</h3>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-2">
-                        <Label>Nom de l'application</Label>
-                        <Input v-model="form.name" placeholder="Logiciel tickets" />
+                        <Label>{{ t('jetons.form.appName') }}</Label>
+                        <Input v-model="form.name" :placeholder="t('jetons.form.appNamePlaceholder')" />
                         <p v-if="form.errors.name" class="text-xs text-destructive">{{ form.errors.name }}</p>
                     </div>
                     <div class="space-y-2">
-                        <Label>Compte EBP</Label>
+                        <Label>{{ t('jetons.form.ebpAccount') }}</Label>
                         <select v-model="form.ebp_account_id" class="gw-select w-full h-11 rounded-xl border border-input bg-background px-4 text-sm">
                             <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.label }}</option>
                         </select>
                     </div>
                     <div class="space-y-2">
-                        <Label>Dossier par défaut (optionnel)</Label>
+                        <Label>{{ t('jetons.form.defaultFolder') }}</Label>
                         <select v-model="form.default_folder_id" class="gw-select w-full h-11 rounded-xl border border-input bg-background px-4 text-sm">
-                            <option :value="null">— à préciser dans chaque requête</option>
+                            <option :value="null">{{ t('jetons.form.folderPerRequest') }}</option>
                             <option v-for="f in currentFolders" :key="f.id" :value="f.id">{{ f.label }}</option>
                         </select>
-                        <p class="text-xs text-muted-foreground">Sinon l'app devra passer folderId à chaque appel.</p>
+                        <p class="text-xs text-muted-foreground">{{ t('jetons.form.folderHint') }}</p>
                     </div>
                 </div>
-                <Button :disabled="form.processing" @click="submit">Créer le jeton</Button>
+                <Button :disabled="form.processing" @click="submit">{{ t('jetons.form.submit') }}</Button>
             </div>
         </CutCard>
 
         <!-- Aucun jeton -->
         <CutCard v-if="!tokens.length">
-            <EmptyState :icon="KeyRound" title="Aucun jeton d'application"
-                text="Créez un jeton pour qu'une application (impression de tickets, pilotage…) puisse accéder à EBP via la gateway.">
-                <Button size="lg" @click="showForm = true"><Plus class="size-5" /> Créer un jeton</Button>
+            <EmptyState :icon="KeyRound" :title="t('jetons.empty.title')"
+                :text="t('jetons.empty.text')">
+                <Button size="lg" @click="showForm = true"><Plus class="size-5" /> {{ t('jetons.create') }}</Button>
             </EmptyState>
         </CutCard>
 
@@ -288,45 +283,45 @@ function ruleError(index, field) {
             <!-- Jetons actifs. Titre seulement s'il y a aussi des jetons révoqués. -->
             <CutCard :class="revokedTokens.length ? 'mb-4' : ''">
                 <div class="p-5">
-                    <h3 v-if="revokedTokens.length" class="text-base font-medium text-[#002C52] mb-3">Jetons actifs</h3>
-                    <p v-if="!activeTokens.length" class="text-sm text-muted-foreground">Aucun jeton actif.</p>
+                    <h3 v-if="revokedTokens.length" class="text-base font-medium text-[#002C52] mb-3">{{ t('jetons.activeTokens') }}</h3>
+                    <p v-if="!activeTokens.length" class="text-sm text-muted-foreground">{{ t('jetons.noActive') }}</p>
                     <Table v-else>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Application</TableHead>
-                                <TableHead>Compte EBP</TableHead>
-                                <TableHead>Dossier par défaut</TableHead>
-                                <TableHead>Accès EBP</TableHead>
-                                <TableHead>Dernière utilisation</TableHead>
-                                <TableHead>État</TableHead>
-                                <TableHead class="text-right">Actions</TableHead>
+                                <TableHead>{{ t('jetons.col.application') }}</TableHead>
+                                <TableHead>{{ t('jetons.form.ebpAccount') }}</TableHead>
+                                <TableHead>{{ t('jetons.col.defaultFolder') }}</TableHead>
+                                <TableHead>{{ t('jetons.col.ebpAccess') }}</TableHead>
+                                <TableHead>{{ t('jetons.col.lastUse') }}</TableHead>
+                                <TableHead>{{ t('common.status') }}</TableHead>
+                                <TableHead class="text-right">{{ t('common.actions') }}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow v-for="t in activeTokens" :key="t.id">
-                                <TableCell class="font-medium">{{ t.name }}</TableCell>
-                                <TableCell class="text-muted-foreground">{{ t.account }}</TableCell>
-                                <TableCell class="text-muted-foreground">{{ t.folder }}</TableCell>
+                            <TableRow v-for="tok in activeTokens" :key="tok.id">
+                                <TableCell class="font-medium">{{ tok.name }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ tok.account }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ tok.folder }}</TableCell>
                                 <TableCell>
-                                    <Badge v-if="(t.rules?.length ?? 0) === 0" variant="secondary" title="Accès à tout le périmètre EBP autorisé">Ouvert</Badge>
-                                    <Badge v-else variant="outline" class="border-amber-400 text-amber-700" :title="`${t.rules.length} règle(s) d'accès`">
-                                        Restreint ({{ t.rules.length }})
+                                    <Badge v-if="(tok.rules?.length ?? 0) === 0" variant="secondary" :title="t('jetons.accessOpenTitle')">{{ t('jetons.accessOpen') }}</Badge>
+                                    <Badge v-else variant="outline" class="border-amber-400 text-amber-700" :title="t('jetons.accessRulesTitle', { count: tok.rules.length })">
+                                        {{ t('jetons.accessRestricted', { count: tok.rules.length }) }}
                                     </Badge>
                                 </TableCell>
-                                <TableCell class="text-muted-foreground">{{ t.lastUsed }}</TableCell>
-                                <TableCell><Badge variant="default">Actif</Badge></TableCell>
+                                <TableCell class="text-muted-foreground">{{ tok.lastUsed }}</TableCell>
+                                <TableCell><Badge variant="default">{{ t('jetons.stateActive') }}</Badge></TableCell>
                                 <TableCell class="text-right">
                                     <div class="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="sm" @click="openRules(t)">
-                                            <ShieldCheck class="size-3.5" /> Accès
+                                        <Button variant="ghost" size="sm" @click="openRules(tok)">
+                                            <ShieldCheck class="size-3.5" /> {{ t('jetons.access') }}
                                         </Button>
-                                        <Button variant="ghost" size="sm" @click="openPairing(t)">
-                                            <QrCode class="size-3.5" /> Connecter
+                                        <Button variant="ghost" size="sm" @click="openPairing(tok)">
+                                            <QrCode class="size-3.5" /> {{ t('jetons.connect') }}
                                         </Button>
-                                        <Button variant="ghost" size="sm" @click="regenerate(t)">
-                                            <RefreshCw class="size-3.5" /> Régénérer la clé
+                                        <Button variant="ghost" size="sm" @click="regenerate(tok)">
+                                            <RefreshCw class="size-3.5" /> {{ t('jetons.regenerateKey') }}
                                         </Button>
-                                        <Button variant="ghost" size="sm" class="text-destructive" @click="revoke(t.id)">Révoquer</Button>
+                                        <Button variant="ghost" size="sm" class="text-destructive" @click="revoke(tok.id)">{{ t('jetons.revoke') }}</Button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -338,24 +333,24 @@ function ruleError(index, field) {
             <!-- Jetons révoqués : affichés seulement s'il y en a, sans action (révocation définitive). -->
             <CutCard v-if="revokedTokens.length">
                 <div class="p-5">
-                    <h3 class="text-base font-medium text-[#002C52] mb-3">Jetons révoqués</h3>
+                    <h3 class="text-base font-medium text-[#002C52] mb-3">{{ t('jetons.revokedTokens') }}</h3>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Application</TableHead>
-                                <TableHead>Compte EBP</TableHead>
-                                <TableHead>Dossier par défaut</TableHead>
-                                <TableHead>Dernière utilisation</TableHead>
-                                <TableHead>État</TableHead>
+                                <TableHead>{{ t('jetons.col.application') }}</TableHead>
+                                <TableHead>{{ t('jetons.form.ebpAccount') }}</TableHead>
+                                <TableHead>{{ t('jetons.col.defaultFolder') }}</TableHead>
+                                <TableHead>{{ t('jetons.col.lastUse') }}</TableHead>
+                                <TableHead>{{ t('common.status') }}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow v-for="t in revokedTokens" :key="t.id">
-                                <TableCell class="font-medium text-muted-foreground">{{ t.name }}</TableCell>
-                                <TableCell class="text-muted-foreground">{{ t.account }}</TableCell>
-                                <TableCell class="text-muted-foreground">{{ t.folder }}</TableCell>
-                                <TableCell class="text-muted-foreground">{{ t.lastUsed }}</TableCell>
-                                <TableCell><Badge variant="secondary">Révoqué</Badge></TableCell>
+                            <TableRow v-for="tok in revokedTokens" :key="tok.id">
+                                <TableCell class="font-medium text-muted-foreground">{{ tok.name }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ tok.account }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ tok.folder }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ tok.lastUsed }}</TableCell>
+                                <TableCell><Badge variant="secondary">{{ t('jetons.stateRevoked') }}</Badge></TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
@@ -369,47 +364,43 @@ function ruleError(index, field) {
                 <div class="p-5">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2">
-                            <QrCode class="size-4" /> Connecter « {{ pairing.token?.name }} »
+                            <QrCode class="size-4" /> {{ t('jetons.pairing.title', { name: pairing.token?.name }) }}
                         </h3>
-                        <Button variant="ghost" size="icon" @click="closePairing" aria-label="Fermer"><X class="size-4" /></Button>
+                        <Button variant="ghost" size="icon" @click="closePairing" :aria-label="t('common.close')"><X class="size-4" /></Button>
                     </div>
 
                     <!-- Étape 1 : mot de passe -->
                     <template v-if="pairing.step === 'password'">
                         <p class="text-sm text-muted-foreground mb-4">
-                            Pour afficher le QR code d'appairage, confirmez votre mot de passe administrateur.
-                            Le QR transmet ce jeton sans le changer : vous pouvez connecter plusieurs appareils.
+                            {{ t('jetons.pairing.passwordIntro') }}
                         </p>
                         <form @submit.prevent="startPairing" class="space-y-3">
                             <div class="space-y-2">
-                                <Label>Mot de passe administrateur</Label>
+                                <Label>{{ t('jetons.pairing.adminPassword') }}</Label>
                                 <Input v-model="pairing.password" type="password" autocomplete="current-password" />
                                 <p v-if="pairing.error" class="text-xs text-destructive">{{ pairing.error }}</p>
                             </div>
-                            <Button v-if="!pairing.needsRegen" type="submit" :disabled="pairing.busy || !pairing.password" class="w-full">Afficher le QR code</Button>
-                            <Button v-else type="button" variant="outline" class="w-full" @click="regenerateFromPairing">Régénérer la clé maintenant</Button>
+                            <Button v-if="!pairing.needsRegen" type="submit" :disabled="pairing.busy || !pairing.password" class="w-full">{{ t('jetons.pairing.showQr') }}</Button>
+                            <Button v-else type="button" variant="outline" class="w-full" @click="regenerateFromPairing">{{ t('jetons.pairing.regenerateNow') }}</Button>
                         </form>
                     </template>
 
                     <!-- Étape 2 : QR d'appairage -->
                     <template v-else>
                         <p class="text-sm text-muted-foreground mb-3">
-                            Scannez ce code depuis l'application pour la connecter. Il contient un
-                            <strong class="text-[#002C52]">code d'appairage temporaire</strong>, pas le jeton :
-                            l'application récupère le jeton par la gateway, puis le code est invalidé.
+                            {{ t('jetons.pairing.qrIntro') }}
                         </p>
                         <div class="flex flex-col items-center gap-3">
                             <div class="rounded-xl bg-white border border-[#E4DFCE] p-3">
                                 <canvas ref="pairingCanvas" class="block"></canvas>
                             </div>
                             <div class="text-sm" :class="countdown > 0 ? 'text-muted-foreground' : 'text-destructive'">
-                                <template v-if="countdown > 0">Expire dans <strong class="text-[#002C52]">{{ countdownLabel }}</strong></template>
-                                <template v-else>Code expiré — fermez et recommencez.</template>
+                                <template v-if="countdown > 0">{{ t('jetons.pairing.expiresIn') }} <strong class="text-[#002C52]">{{ countdownLabel }}</strong></template>
+                                <template v-else>{{ t('jetons.pairing.expired') }}</template>
                             </div>
                         </div>
                         <p class="text-xs text-muted-foreground mt-4">
-                            Usage unique : une fois scanné, ce code ne fonctionne plus. Un QR photographié
-                            après coup est inutile.
+                            {{ t('jetons.pairing.singleUse') }}
                         </p>
                     </template>
                 </div>
@@ -421,38 +412,36 @@ function ruleError(index, field) {
             <div class="w-full max-w-2xl rounded-[1.5rem] bg-background border border-[#E4DFCE] shadow-xl max-h-[90vh] flex flex-col">
                 <div class="p-5 border-b border-[#E4DFCE] flex items-center justify-between">
                     <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2">
-                        <ShieldCheck class="size-4" /> Accès EBP de « {{ rulesModal.token?.name }} »
+                        <ShieldCheck class="size-4" /> {{ t('jetons.rules.title', { name: rulesModal.token?.name }) }}
                     </h3>
-                    <Button variant="ghost" size="icon" @click="closeRules" aria-label="Fermer"><X class="size-4" /></Button>
+                    <Button variant="ghost" size="icon" @click="closeRules" :aria-label="t('common.close')"><X class="size-4" /></Button>
                 </div>
 
                 <div class="p-5 space-y-4 overflow-y-auto">
                     <!-- Explication de la sémantique ouvert / restreint -->
                     <div class="rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
                         <template v-if="rulesForm.rules.length === 0">
-                            <strong class="text-[#002C52]">Aucune règle : accès ouvert.</strong>
-                            L'application peut appeler tout le périmètre EBP autorisé par la gateway.
-                            Ajoutez des règles pour restreindre au moindre privilège.
+                            <strong class="text-[#002C52]">{{ t('jetons.rules.openTitle') }}</strong>
+                            {{ t('jetons.rules.openText') }}
                         </template>
                         <template v-else>
-                            <strong class="text-[#002C52]">{{ rulesForm.rules.length }} règle(s) : accès restreint.</strong>
-                            L'application ne peut appeler QUE les routes listées (les autres renvoient 403).
-                            Les fonctions de la gateway (/api/v1 : whoami, jobs, batch…) restent toujours accessibles.
+                            <strong class="text-[#002C52]">{{ t('jetons.rules.restrictedTitle', { count: rulesForm.rules.length }) }}</strong>
+                            {{ t('jetons.rules.restrictedText') }}
                         </template>
                     </div>
 
                     <!-- Liste des règles -->
                     <div v-for="(rule, i) in rulesForm.rules" :key="i" class="rounded-xl border border-input p-4 space-y-3">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-muted-foreground">Règle {{ i + 1 }}</span>
-                            <Button variant="ghost" size="icon" class="text-destructive size-7" @click="removeRule(i)" aria-label="Supprimer la règle">
+                            <span class="text-xs font-medium text-muted-foreground">{{ t('jetons.rules.ruleN', { n: i + 1 }) }}</span>
+                            <Button variant="ghost" size="icon" class="text-destructive size-7" @click="removeRule(i)" :aria-label="t('jetons.rules.removeRule')">
                                 <Trash2 class="size-3.5" />
                             </Button>
                         </div>
 
                         <!-- Verbes HTTP -->
                         <div class="space-y-1.5">
-                            <Label class="text-xs">Verbes autorisés</Label>
+                            <Label class="text-xs">{{ t('jetons.rules.allowedVerbs') }}</Label>
                             <div class="flex flex-wrap gap-1.5">
                                 <button v-for="m in HTTP_METHODS" :key="m" type="button"
                                     class="px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors"
@@ -468,7 +457,7 @@ function ruleError(index, field) {
 
                         <!-- Pattern de route -->
                         <div class="space-y-1.5">
-                            <Label class="text-xs">Motif de route</Label>
+                            <Label class="text-xs">{{ t('jetons.rules.routePattern') }}</Label>
                             <Input v-model="rule.pattern" list="route-patterns"
                                 placeholder="gescom/api/v1/Folders/*/Items/*" class="font-mono text-xs" />
                             <p v-if="ruleError(i, 'pattern')" class="text-xs text-destructive">{{ ruleError(i, 'pattern') }}</p>
@@ -481,20 +470,20 @@ function ruleError(index, field) {
                     </datalist>
 
                     <Button variant="outline" size="sm" @click="addRule">
-                        <Plus class="size-3.5" /> Ajouter une règle
+                        <Plus class="size-3.5" /> {{ t('jetons.rules.addRule') }}
                     </Button>
 
                     <!-- Aide sur les jokers -->
                     <p class="text-xs text-muted-foreground">
-                        Jokers : <code class="bg-muted rounded px-1">*</code> = un segment,
-                        <code class="bg-muted rounded px-1">**</code> = le reste du chemin.
-                        Le dossier (FolderId) est implicite : écrivez le chemin tel que l'app l'appelle.
+                        {{ t('jetons.rules.wildcardsBefore') }} <code class="bg-muted rounded px-1">*</code> {{ t('jetons.rules.wildcardsOne') }}
+                        <code class="bg-muted rounded px-1">**</code> {{ t('jetons.rules.wildcardsRest') }}
+                        {{ t('jetons.rules.wildcardsFolder') }}
                     </p>
                 </div>
 
                 <div class="p-5 border-t border-[#E4DFCE] flex items-center justify-end gap-2">
-                    <Button variant="ghost" @click="closeRules">Annuler</Button>
-                    <Button :disabled="rulesForm.processing" @click="saveRules">Enregistrer les règles</Button>
+                    <Button variant="ghost" @click="closeRules">{{ t('common.cancel') }}</Button>
+                    <Button :disabled="rulesForm.processing" @click="saveRules">{{ t('jetons.rules.save') }}</Button>
                 </div>
             </div>
         </div>

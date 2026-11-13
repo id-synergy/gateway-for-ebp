@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\FakeEbp\FakeEbpController;
 use App\Http\Controllers\HealthcheckController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\OAuth\EbpOAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +26,9 @@ Route::post('/invitation/{token}', [AcceptInvitationController::class, 'store'])
 // Contrôle de santé pour la supervision (Uptime Kuma) : public = ok/ko,
 // détail par brique avec ?token=HEALTHCHECK_TOKEN.
 Route::get('/healthcheck', HealthcheckController::class)->name('healthcheck');
+
+// Sélecteur de langue (public) : pose le cookie `locale`, relu par SetLocale.
+Route::get('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 
 // /login, /two-factor-challenge, /logout : fournis par Fortify (vues Inertia configurées).
 

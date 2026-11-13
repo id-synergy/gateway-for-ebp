@@ -1,4 +1,6 @@
-@props(['level' => 'info', 'label' => 'Information'])
+{{-- Bannière d'alerte bilingue : `label` (FR) et, si fourni, `labelEn` (EN) affichés
+     l'un sous l'autre. Les e-mails de la gateway sont envoyés en FR + EN. --}}
+@props(['level' => 'info', 'label' => 'Information', 'labelEn' => null])
 @php
     // Couleurs par niveau, dans la charte de la gateway.
     $styles = [
@@ -13,7 +15,7 @@
 <tr>
 <td style="background-color: {{ $s['bg'] }}; border-left: 4px solid {{ $s['bar'] }}; border-radius: 10px; padding: 12px 16px;">
 <span style="display:inline-block; width:22px; height:22px; line-height:22px; text-align:center; background-color: {{ $s['bar'] }}; color:#ffffff; border-radius:50%; font-weight:700; font-size:13px; margin-right:9px; vertical-align:middle;">{{ $s['icon'] }}</span>
-<span style="color: {{ $s['text'] }}; font-weight:600; font-size:13px; letter-spacing:0.3px; vertical-align:middle;">{{ $label }}</span>
+<span style="color: {{ $s['text'] }}; font-weight:600; font-size:13px; letter-spacing:0.3px; vertical-align:middle;">{{ $label }}@if ($labelEn) <span style="opacity:0.7;">· {{ $labelEn }}</span>@endif</span>
 </td>
 </tr>
 </table>

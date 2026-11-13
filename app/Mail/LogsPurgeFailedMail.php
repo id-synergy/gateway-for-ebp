@@ -21,7 +21,7 @@ class LogsPurgeFailedMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: '[Gateway EBP] Échec de la purge des logs');
+        return new Envelope(subject: '[Gateway EBP] Échec purge logs — Log purge failed');
     }
 
     public function content(): Content

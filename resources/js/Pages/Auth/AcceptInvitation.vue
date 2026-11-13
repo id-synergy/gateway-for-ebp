@@ -1,10 +1,13 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import { ShieldCheck, Plug, KeyRound, Activity } from 'lucide-vue-next';
 import GatewayLogo from '@/components/GatewayLogo.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+const { t } = useI18n();
 
 const props = defineProps({
     token: { type: String, required: true },
@@ -19,9 +22,9 @@ function submit() {
 }
 
 const points = [
-    { icon: Plug, text: 'Connexion OAuth EBP multi-comptes' },
-    { icon: KeyRound, text: "Jetons d'accès par application" },
-    { icon: Activity, text: 'Régulation du quota et journalisation' },
+    { icon: Plug, text: t('auth.points.multiAccount') },
+    { icon: KeyRound, text: t('auth.points.perAppTokens') },
+    { icon: Activity, text: t('auth.points.quotaLogging') },
 ];
 </script>
 
@@ -42,10 +45,10 @@ const points = [
 
             <div class="relative">
                 <h1 class="text-white text-3xl font-medium leading-tight mb-3">
-                    Bienvenue à bord.
+                    {{ t('auth.acceptInvitation.heroTitle') }}
                 </h1>
                 <p class="text-[#9FB6D1] text-sm max-w-sm mb-8">
-                    Définissez votre mot de passe pour accéder au back-office de la passerelle EBP.
+                    {{ t('auth.acceptInvitation.heroSubtitle') }}
                 </p>
                 <ul class="space-y-3">
                     <li v-for="p in points" :key="p.text" class="flex items-center gap-3 text-white/90 text-sm">
@@ -57,15 +60,15 @@ const points = [
                 </ul>
             </div>
 
-            <div class="relative text-[#6E8CAE] text-xs">Lien d'invitation personnel — valable 24 h.</div>
+            <div class="relative text-[#6E8CAE] text-xs">{{ t('auth.acceptInvitation.linkNote') }}</div>
         </div>
 
         <!-- Volet droit : formulaire sur crème -->
         <div class="flex items-center justify-center p-6 bg-background">
             <div class="w-full max-w-sm">
                 <div class="lg:hidden flex justify-center mb-6"><GatewayLogo :size="44" :rounded="12" /></div>
-                <h2 class="text-2xl font-medium text-[#002C52] mb-1">Créer mon compte</h2>
-                <p class="text-sm text-muted-foreground mb-7">Vous êtes invité·e en tant qu'administrateur.</p>
+                <h2 class="text-2xl font-medium text-[#002C52] mb-1">{{ t('auth.acceptInvitation.title') }}</h2>
+                <p class="text-sm text-muted-foreground mb-7">{{ t('auth.acceptInvitation.subtitle') }}</p>
 
                 <div class="rounded-xl bg-[#F6F2E4] px-4 py-3 mb-5 text-sm">
                     <div class="text-[#002C52] font-medium">{{ name }}</div>
@@ -74,18 +77,18 @@ const points = [
 
                 <form class="space-y-4" @submit.prevent="submit">
                     <div class="space-y-2">
-                        <Label for="password">Mot de passe</Label>
+                        <Label for="password">{{ t('auth.acceptInvitation.password') }}</Label>
                         <Input id="password" v-model="form.password" type="password" autocomplete="new-password" />
-                        <p class="text-xs text-muted-foreground">Au moins 10 caractères.</p>
+                        <p class="text-xs text-muted-foreground">{{ t('auth.acceptInvitation.passwordHint') }}</p>
                         <p v-if="form.errors.password" class="text-xs text-destructive">{{ form.errors.password }}</p>
                     </div>
                     <div class="space-y-2">
-                        <Label for="password_confirmation">Confirmer le mot de passe</Label>
+                        <Label for="password_confirmation">{{ t('auth.acceptInvitation.passwordConfirm') }}</Label>
                         <Input id="password_confirmation" v-model="form.password_confirmation" type="password" autocomplete="new-password" />
                     </div>
-                    <Button type="submit" size="lg" class="w-full" :disabled="form.processing">Créer mon compte</Button>
+                    <Button type="submit" size="lg" class="w-full" :disabled="form.processing">{{ t('auth.acceptInvitation.submit') }}</Button>
                     <p class="text-xs text-muted-foreground flex items-center justify-center gap-1.5 pt-1">
-                        <ShieldCheck class="size-3.5" /> Vous activerez la double authentification ensuite
+                        <ShieldCheck class="size-3.5" /> {{ t('auth.acceptInvitation.twoFactorHint') }}
                     </p>
                 </form>
             </div>

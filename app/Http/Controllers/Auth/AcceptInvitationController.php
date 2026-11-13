@@ -43,7 +43,7 @@ class AcceptInvitationController extends Controller
         $invitation = $this->resolve($token);
 
         if (! $invitation) {
-            return redirect('/login')->with('error', 'Cette invitation n\'est plus valide.');
+            return redirect('/login')->with('error', __('messages.flash.invitation_no_longer_valid'));
         }
 
         $request->validate([
@@ -52,7 +52,7 @@ class AcceptInvitationController extends Controller
 
         // Garde-fou : l'e-mail a pu être pris entre l'envoi et l'acceptation.
         if (User::where('email', $invitation->email)->exists()) {
-            return redirect('/login')->with('error', 'Un compte existe déjà avec cette adresse.');
+            return redirect('/login')->with('error', __('messages.flash.account_already_exists'));
         }
 
         $user = DB::transaction(function () use ($invitation, $request) {
@@ -72,7 +72,7 @@ class AcceptInvitationController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect('/admin')->with('success', 'Bienvenue ! Pensez à activer la double authentification depuis votre profil.');
+        return redirect('/admin')->with('success', __('messages.flash.welcome_enable_2fa'));
     }
 
     /** Retourne l'invitation valide correspondant au token en clair, ou null. */

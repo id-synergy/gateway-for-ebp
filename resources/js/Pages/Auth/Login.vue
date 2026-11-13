@@ -1,10 +1,13 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import { ShieldCheck, Plug, KeyRound, Activity } from 'lucide-vue-next';
 import GatewayLogo from '@/components/GatewayLogo.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+const { t } = useI18n();
 
 const form = useForm({ email: '', password: '', remember: false });
 
@@ -14,9 +17,9 @@ function submit() {
 }
 
 const points = [
-    { icon: Plug, text: 'Connexion OAuth EBP multi-comptes' },
-    { icon: KeyRound, text: "Jetons d'accès par application" },
-    { icon: Activity, text: 'Régulation du quota et journalisation' },
+    { icon: Plug, text: t('auth.points.multiAccount') },
+    { icon: KeyRound, text: t('auth.points.perAppTokens') },
+    { icon: Activity, text: t('auth.points.quotaLogging') },
 ];
 </script>
 
@@ -36,11 +39,9 @@ const points = [
             </div>
 
             <div class="relative">
-                <h1 class="text-white text-3xl font-medium leading-tight mb-3">
-                    Vos applications,<br>une seule porte vers EBP.
-                </h1>
+                <h1 class="text-white text-3xl font-medium leading-tight mb-3" v-html="t('auth.login.heroTitle')" />
                 <p class="text-[#9FB6D1] text-sm max-w-sm mb-8">
-                    La passerelle centralise l'accès à l'API EBP SaaS Gestion : authentification, quota, journalisation.
+                    {{ t('auth.login.heroSubtitle') }}
                 </p>
                 <ul class="space-y-3">
                     <li v-for="p in points" :key="p.text" class="flex items-center gap-3 text-white/90 text-sm">
@@ -52,33 +53,33 @@ const points = [
                 </ul>
             </div>
 
-            <div class="relative text-[#6E8CAE] text-xs">Accès réservé aux administrateurs.</div>
+            <div class="relative text-[#6E8CAE] text-xs">{{ t('auth.login.adminsOnly') }}</div>
         </div>
 
         <!-- Volet droit : formulaire sur crème -->
         <div class="flex items-center justify-center p-6 bg-background">
             <div class="w-full max-w-sm">
                 <div class="lg:hidden flex justify-center mb-6"><GatewayLogo :size="44" :rounded="12" /></div>
-                <h2 class="text-2xl font-medium text-[#002C52] mb-1">Connexion</h2>
-                <p class="text-sm text-muted-foreground mb-7">Accédez à l'espace d'administration.</p>
+                <h2 class="text-2xl font-medium text-[#002C52] mb-1">{{ t('auth.login.title') }}</h2>
+                <p class="text-sm text-muted-foreground mb-7">{{ t('auth.login.subtitle') }}</p>
 
                 <form class="space-y-4" @submit.prevent="submit">
                     <div class="space-y-2">
-                        <Label for="email">Adresse e-mail</Label>
+                        <Label for="email">{{ t('auth.login.email') }}</Label>
                         <Input id="email" v-model="form.email" type="email" placeholder="admin@example.com" autocomplete="username" />
                         <p v-if="form.errors.email" class="text-xs text-destructive">{{ form.errors.email }}</p>
                     </div>
                     <div class="space-y-2">
-                        <Label for="password">Mot de passe</Label>
+                        <Label for="password">{{ t('auth.login.password') }}</Label>
                         <Input id="password" v-model="form.password" type="password" autocomplete="current-password" />
                         <p v-if="form.errors.password" class="text-xs text-destructive">{{ form.errors.password }}</p>
                     </div>
                     <label class="flex items-center gap-2 text-sm text-muted-foreground">
-                        <input v-model="form.remember" type="checkbox" class="gw-check"> Se souvenir de moi
+                        <input v-model="form.remember" type="checkbox" class="gw-check"> {{ t('auth.login.remember') }}
                     </label>
-                    <Button type="submit" size="lg" class="w-full" :disabled="form.processing">Se connecter</Button>
+                    <Button type="submit" size="lg" class="w-full" :disabled="form.processing">{{ t('auth.login.submit') }}</Button>
                     <p class="text-xs text-muted-foreground flex items-center justify-center gap-1.5 pt-1">
-                        <ShieldCheck class="size-3.5" /> Double authentification si activée
+                        <ShieldCheck class="size-3.5" /> {{ t('auth.login.twoFactorHint') }}
                     </p>
                 </form>
             </div>
