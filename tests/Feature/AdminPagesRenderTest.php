@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\AllowedIp;
 use App\Models\AppToken;
 use App\Models\EbpAccount;
 use App\Models\EbpFolder;
+use App\Models\IpEntry;
 use App\Models\RequestLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,20 +67,24 @@ class AdminPagesRenderTest extends TestCase
                 ->where('accounts.0.folders.0.id', '405032'));
     }
 
-    public function test_la_page_ip_liste_les_ip_autorisees(): void
+    public function test_la_page_ip_separe_autorisees_et_bloquees(): void
     {
         $author = $this->admin();
-        AllowedIp::create(['ip' => '203.0.113.7', 'label' => 'Bureau', 'created_by' => $author->id]);
+        IpEntry::create(['ip' => '203.0.113.7', 'label' => 'Bureau', 'status' => 'allowed', 'created_by' => $author->id]);
+        IpEntry::create(['ip' => '198.51.100.9', 'label' => 'Scan', 'status' => 'blocked', 'created_by' => $author->id]);
 
         $this->actingAs($author)
             ->get('/admin/ip')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/Ip')
-                ->has('ips', 1)
-                ->where('ips.0.ip', '203.0.113.7')
-                ->where('ips.0.label', 'Bureau')
-                ->where('ips.0.by', $author->name));
+                ->has('allowed', 1)
+                ->where('allowed.0.ip', '203.0.113.7')
+                ->where('allowed.0.label', 'Bureau')
+                ->where('allowed.0.by', $author->name)
+                ->has('blocked', 1)
+                ->where('blocked.0.ip', '198.51.100.9')
+                ->has('seen'));
     }
 
     public function test_la_page_admins_liste_les_utilisateurs(): void

@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'app.token' => \App\Http\Middleware\AuthenticateAppToken::class,
             '2fa' => \App\Http\Middleware\EnsureTwoFactorEnabled::class,
+            'block.ip' => \App\Http\Middleware\BlockBannedIps::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
