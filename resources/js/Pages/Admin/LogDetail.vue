@@ -1,11 +1,14 @@
 <script setup>
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Repeat } from 'lucide-vue-next';
+
+const { t, locale } = useI18n();
 
 const props = defineProps({
     log: { type: Object, required: true },
@@ -32,27 +35,27 @@ function statusVariant(s) {
     return 'destructive';
 }
 
-const infos = [
-    { label: 'Horodatage', value: props.log.at },
-    { label: 'Application', value: props.log.app },
-    { label: 'Compte EBP', value: props.log.account },
-    { label: 'Dossier', value: props.log.folder },
-    { label: 'IP source', value: props.log.ip || '—' },
-    { label: 'Durée', value: `${props.log.durationMs} ms` },
-];
+const infos = computed(() => [
+    { label: t('logDetail.infos.timestamp'), value: props.log.at },
+    { label: t('logDetail.infos.application'), value: props.log.app },
+    { label: t('logDetail.infos.account'), value: props.log.account },
+    { label: t('logDetail.infos.folder'), value: props.log.folder },
+    { label: t('logDetail.infos.sourceIp'), value: props.log.ip || '—' },
+    { label: t('logDetail.infos.duration'), value: `${props.log.durationMs} ms` },
+]);
 </script>
 
 <template>
     <AdminLayout current="logs">
         <template #title>
             <Link href="/admin/logs" class="inline-flex items-center gap-2 text-muted-foreground hover:text-[#002C52]">
-                <ArrowLeft class="size-4" /> Logs
+                <ArrowLeft class="size-4" /> {{ t('logs.title') }}
             </Link>
         </template>
 
         <template v-if="canReplay" #actions>
             <Button as-child variant="outline">
-                <Link :href="replayHref"><Repeat class="size-4" /> Rejouer dans le testeur</Link>
+                <Link :href="replayHref"><Repeat class="size-4" /> {{ t('logDetail.replay') }}</Link>
             </Button>
         </template>
 
@@ -73,7 +76,7 @@ const infos = [
         <!-- Paramètres -->
         <CutCard v-if="log.params && Object.keys(log.params).length" class="mb-4">
             <div class="p-5">
-                <h3 class="text-base font-medium text-[#002C52] mb-3">Paramètres de la requête</h3>
+                <h3 class="text-base font-medium text-[#002C52] mb-3">{{ t('logDetail.requestParams') }}</h3>
                 <pre class="rounded-xl bg-[#F6F2E4] text-[#002C52] text-xs p-4 overflow-auto">{{ JSON.stringify(log.params, null, 2) }}</pre>
             </div>
         </CutCard>
@@ -82,11 +85,11 @@ const infos = [
         <CutCard>
             <div class="p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-base font-medium text-[#002C52]">Corps de réponse EBP</h3>
-                    <span v-if="log.size" class="text-xs text-muted-foreground">{{ log.size.toLocaleString('fr-FR') }} octets</span>
+                    <h3 class="text-base font-medium text-[#002C52]">{{ t('logDetail.responseBody') }}</h3>
+                    <span v-if="log.size" class="text-xs text-muted-foreground">{{ t('logDetail.bytes', { n: log.size.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-US') }) }}</span>
                 </div>
                 <p v-if="!body" class="text-sm text-muted-foreground">
-                    Corps non disponible (non enregistré, ou purgé après 360 jours).
+                    {{ t('logDetail.bodyUnavailable') }}
                 </p>
                 <pre v-else class="rounded-xl bg-[#002C52] text-[#DCE7F5] text-xs p-4 overflow-auto max-h-[28rem]">{{ body }}</pre>
             </div>

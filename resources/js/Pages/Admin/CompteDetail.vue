@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
@@ -19,6 +20,8 @@ const props = defineProps({
     callCount: { type: Number, default: 0 },
     events: { type: Object, default: () => ({ items: [], hasMore: false, nextCursor: null }) },
 });
+
+const { t } = useI18n();
 
 // --- Journal d'activité : timeline avec scroll infini + actualisation ---
 const log = ref([...props.events.items]);
@@ -84,11 +87,11 @@ onMounted(() => {
 });
 onBeforeUnmount(() => observer?.disconnect());
 
-const stateBadge = {
-    healthy: { text: 'Sain', variant: 'default' },
-    expiring: { text: 'Expire bientôt', variant: 'secondary' },
-    broken: { text: 'Rompu', variant: 'destructive' },
-};
+const stateBadge = computed(() => ({
+    healthy: { text: t('comptes.state.healthy'), variant: 'default' },
+    expiring: { text: t('comptes.state.expiring'), variant: 'secondary' },
+    broken: { text: t('comptes.state.broken'), variant: 'destructive' },
+}));
 
 const showEdit = ref(false);
 const form = useForm({
@@ -117,7 +120,7 @@ function submitManual() {
     });
 }
 function remove() {
-    if (window.confirm(`Supprimer le compte « ${props.account.label} » ? Les jetons rattachés perdront leur accès.`)) {
+    if (window.confirm(t('compteDetail.confirmDelete', { label: props.account.label }))) {
         router.delete(`/admin/comptes/${props.account.id}`);
     }
 }
@@ -136,7 +139,7 @@ function clearCache() {
     <AdminLayout current="comptes">
         <template #title>
             <Link href="/admin/comptes" class="inline-flex items-center gap-2 text-muted-foreground hover:text-[#002C52]">
-                <ArrowLeft class="size-4" /> Comptes EBP
+                <ArrowLeft class="size-4" /> {{ t('comptes.title') }}
             </Link>
         </template>
 
@@ -153,23 +156,23 @@ function clearCache() {
                             </Badge>
                         </div>
                         <div class="text-xs text-muted-foreground flex items-center gap-1.5">
-                            Clé d'abonnement : {{ account.key }}
+                            {{ t('comptes.subscriptionKey') }} : {{ account.key }}
                             <span class="inline-block px-1.5 py-0.5 rounded-md text-[11px] font-medium"
                                   :class="{
                                       'bg-[#1D9E75]/15 text-[#0F6E56]': account.environment === 'production',
                                       'bg-[#FAC775] text-[#633806]': account.environment === 'preproduction',
                                       'bg-primary/15 text-primary': account.environment === 'demo',
                                   }">
-                                {{ account.environment === 'preproduction' ? 'Préproduction' : account.environment === 'demo' ? 'Démo' : 'Production' }}
+                                {{ account.environment === 'preproduction' ? t('comptes.env.preproductionShort') : account.environment === 'demo' ? t('comptes.env.demoShort') : t('comptes.env.production') }}
                             </span>
                         </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <Button size="sm" @click="connect">Reconnecter</Button>
-                    <Button v-if="account.manualCallback" variant="outline" size="sm" @click="showManual = !showManual"><ClipboardPaste class="size-3.5" /> Saisir le retour EBP</Button>
-                    <Button variant="outline" size="sm" @click="showEdit = !showEdit"><Settings class="size-3.5" /> Modifier</Button>
-                    <Button variant="outline" size="sm" class="text-destructive" @click="remove"><Trash2 class="size-3.5" /> Supprimer</Button>
+                    <Button size="sm" @click="connect">{{ t('comptes.reconnect') }}</Button>
+                    <Button v-if="account.manualCallback" variant="outline" size="sm" @click="showManual = !showManual"><ClipboardPaste class="size-3.5" /> {{ t('compteDetail.enterCallback') }}</Button>
+                    <Button variant="outline" size="sm" @click="showEdit = !showEdit"><Settings class="size-3.5" /> {{ t('common.edit') }}</Button>
+                    <Button variant="outline" size="sm" class="text-destructive" @click="remove"><Trash2 class="size-3.5" /> {{ t('common.delete') }}</Button>
                 </div>
             </div>
         </CutCard>
@@ -177,25 +180,23 @@ function clearCache() {
         <!-- Déblocage manuel : coller le retour EBP (URL complète ou code) -->
         <CutCard v-if="showManual" class="mb-4">
             <div class="p-5 space-y-3">
-                <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2"><ClipboardPaste class="size-4" /> Saisir le retour EBP</h3>
+                <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2"><ClipboardPaste class="size-4" /> {{ t('compteDetail.enterCallback') }}</h3>
                 <p class="text-xs text-muted-foreground -mt-1">
-                    Après avoir autorisé la connexion sur le portail EBP, collez ici l'URL complète de retour
-                    (la barre d'adresse, même si la page affiche une erreur) ou simplement le code.
-                    Utile quand le redirect_uri whitelisté (ex. <code>localhost:3333</code>) ne pointe pas sur la gateway.
+                    {{ t('compteDetail.manual.introBefore') }} <code>localhost:3333</code> {{ t('compteDetail.manual.introAfter') }}
                 </p>
                 <div class="flex items-start gap-2 text-xs rounded-xl bg-[#FAC775]/25 border border-[#FAC775] text-[#633806] px-3 py-2">
                     <AlertTriangle class="size-4 shrink-0 mt-0.5" />
                     <span>
-                        Le code EBP expire en quelques instants et ne sert qu'une fois : collez le retour
-                        <strong>aussitôt</strong> après l'autorisation, de préférence depuis
-                        <strong>le même navigateur</strong> que « Reconnecter ». S'il est expiré, relancez « Reconnecter ».
+                        {{ t('compteDetail.manual.warnBefore') }}
+                        <strong>{{ t('compteDetail.manual.warnPromptly') }}</strong> {{ t('compteDetail.manual.warnMiddle') }}
+                        <strong>{{ t('compteDetail.manual.warnSameBrowser') }}</strong> {{ t('compteDetail.manual.warnAfter') }}
                     </span>
                 </div>
-                <Input v-model="manualForm.callback" placeholder="http://localhost:3333/callback?code=…&state=…  ou  le code seul" />
+                <Input v-model="manualForm.callback" :placeholder="t('compteDetail.manual.callbackPlaceholder')" />
                 <p v-if="manualForm.errors.callback" class="text-xs text-destructive">{{ manualForm.errors.callback }}</p>
                 <div class="flex items-center gap-2">
-                    <Button size="sm" :disabled="manualForm.processing || !manualForm.callback" @click="submitManual">Valider le token</Button>
-                    <Button variant="outline" size="sm" @click="showManual = false">Annuler</Button>
+                    <Button size="sm" :disabled="manualForm.processing || !manualForm.callback" @click="submitManual">{{ t('compteDetail.manual.submit') }}</Button>
+                    <Button variant="outline" size="sm" @click="showManual = false">{{ t('common.cancel') }}</Button>
                 </div>
             </div>
         </CutCard>
@@ -203,85 +204,85 @@ function clearCache() {
         <!-- Formulaire d'édition -->
         <CutCard v-if="showEdit" class="mb-4">
             <div class="p-5 space-y-4">
-                <h3 class="text-base font-medium text-[#002C52]">Modifier le compte</h3>
-                <p class="text-xs text-muted-foreground -mt-2">Laissez un secret vide pour le conserver inchangé.</p>
+                <h3 class="text-base font-medium text-[#002C52]">{{ t('compteDetail.edit.title') }}</h3>
+                <p class="text-xs text-muted-foreground -mt-2">{{ t('compteDetail.edit.secretHint') }}</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-2">
-                        <Label>Libellé</Label>
+                        <Label>{{ t('comptes.form.label') }}</Label>
                         <Input v-model="form.label" />
                         <p v-if="form.errors.label" class="text-xs text-destructive">{{ form.errors.label }}</p>
                     </div>
                     <div class="space-y-2">
-                        <Label>Clé d'abonnement active</Label>
+                        <Label>{{ t('compteDetail.edit.activeKey') }}</Label>
                         <select v-model="form.active_subscription_key" class="gw-select w-full h-11 rounded-xl border border-input bg-white px-4 text-sm">
-                            <option value="primary">Primaire</option>
-                            <option value="secondary">Secondaire</option>
+                            <option value="primary">{{ t('compteDetail.edit.keyPrimary') }}</option>
+                            <option value="secondary">{{ t('compteDetail.edit.keySecondary') }}</option>
                         </select>
                     </div>
                     <div class="space-y-2">
-                        <Label>Environnement EBP</Label>
+                        <Label>{{ t('comptes.form.environment') }}</Label>
                         <select v-model="form.environment" class="gw-select w-full h-11 rounded-xl border border-input bg-white px-4 text-sm">
-                            <option value="production">Production</option>
-                            <option value="preproduction">Préproduction</option>
-                            <option value="demo">Démo (serveur simulé)</option>
+                            <option value="production">{{ t('comptes.env.production') }}</option>
+                            <option value="preproduction">{{ t('comptes.env.preproduction') }}</option>
+                            <option value="demo">{{ t('comptes.env.demo') }}</option>
                         </select>
                     </div>
                     <div class="space-y-2 sm:col-span-2">
-                        <Label>Redirection OAuth (redirect_uri)</Label>
+                        <Label>{{ t('compteDetail.edit.oauthRedirect') }}</Label>
                         <select v-model="form.redirect_mode" class="gw-select w-full h-11 rounded-xl border border-input bg-white px-4 text-sm">
-                            <option value="gateway">Passerelle (callback de la gateway)</option>
-                            <option value="localhost">Localhost EBP (saisie manuelle du retour)</option>
-                            <option value="custom">Autre / personnalisé (saisie manuelle du retour)</option>
+                            <option value="gateway">{{ t('compteDetail.edit.redirectGateway') }}</option>
+                            <option value="localhost">{{ t('compteDetail.edit.redirectLocalhost') }}</option>
+                            <option value="custom">{{ t('compteDetail.edit.redirectCustom') }}</option>
                         </select>
                         <p class="text-xs text-muted-foreground">
                             <template v-if="form.redirect_mode === 'gateway'">
-                                Le portail EBP renvoie sur le callback de la gateway. À utiliser une fois le domaine validé par EBP.
+                                {{ t('compteDetail.edit.redirectGatewayHint') }}
                             </template>
                             <template v-else-if="form.redirect_mode === 'localhost'">
-                                Utilise le redirect_uri localhost whitelisté d'origine (<code>{{ account.localhostRedirect }}</code>).
-                                Après autorisation, collez le retour via « Saisir le retour EBP ».
+                                {{ t('compteDetail.edit.redirectLocalhostHintBefore') }} (<code>{{ account.localhostRedirect }}</code>).
+                                {{ t('compteDetail.edit.redirectLocalhostHintAfter') }}
                             </template>
                             <template v-else>
-                                URL whitelistée chez EBP à saisir ci-dessous. Après autorisation, collez le retour via « Saisir le retour EBP ».
+                                {{ t('compteDetail.edit.redirectCustomHint') }}
                             </template>
-                            Le renouvellement du token ne dépend pas de ce réglage.
+                            {{ t('compteDetail.edit.redirectTokenNote') }}
                         </p>
                     </div>
                     <div v-if="form.redirect_mode === 'custom'" class="space-y-2 sm:col-span-2">
-                        <Label>Redirect URI personnalisé</Label>
-                        <Input v-model="form.custom_redirect_uri" type="url" placeholder="https://… ou http://localhost:PORT/callback" />
+                        <Label>{{ t('compteDetail.edit.customRedirectUri') }}</Label>
+                        <Input v-model="form.custom_redirect_uri" type="url" :placeholder="t('compteDetail.edit.customRedirectPlaceholder')" />
                         <p v-if="form.errors.custom_redirect_uri" class="text-xs text-destructive">{{ form.errors.custom_redirect_uri }}</p>
                     </div>
                     <div class="space-y-2">
-                        <Label>Cache des lectures</Label>
+                        <Label>{{ t('compteDetail.edit.readCache') }}</Label>
                         <label class="flex items-center gap-2.5 h-11 px-4 rounded-xl border border-input bg-white text-sm cursor-pointer">
                             <input type="checkbox" v-model="form.cache_enabled" class="gw-check" />
-                            <span>{{ form.cache_enabled ? 'Activé' : 'Désactivé' }}</span>
+                            <span>{{ form.cache_enabled ? t('compteDetail.edit.cacheOn') : t('compteDetail.edit.cacheOff') }}</span>
                         </label>
                     </div>
                     <div class="space-y-2">
-                        <Label>Durée du cache (secondes)</Label>
-                        <Input v-model.number="form.cache_ttl" type="number" min="0" max="86400" :disabled="!form.cache_enabled" placeholder="Défaut (config)" />
-                        <p class="text-xs text-muted-foreground">Vide = valeur par défaut. Le cache ne s'applique qu'à une requête identique (URL + paramètres).</p>
+                        <Label>{{ t('compteDetail.edit.cacheTtl') }}</Label>
+                        <Input v-model.number="form.cache_ttl" type="number" min="0" max="86400" :disabled="!form.cache_enabled" :placeholder="t('compteDetail.edit.cacheTtlPlaceholder')" />
+                        <p class="text-xs text-muted-foreground">{{ t('compteDetail.edit.cacheTtlHint') }}</p>
                     </div>
                     <div class="space-y-2">
-                        <Label>ClientId (vide = inchangé)</Label>
+                        <Label>{{ t('compteDetail.edit.clientIdUnchanged') }}</Label>
                         <Input v-model="form.client_id" placeholder="•••••" />
                     </div>
                     <div class="space-y-2">
-                        <Label>ClientSecret (vide = inchangé)</Label>
+                        <Label>{{ t('compteDetail.edit.clientSecretUnchanged') }}</Label>
                         <Input v-model="form.client_secret" type="password" placeholder="•••••" />
                     </div>
                     <div class="space-y-2">
-                        <Label>Clé primaire (vide = inchangée)</Label>
+                        <Label>{{ t('compteDetail.edit.primaryKeyUnchanged') }}</Label>
                         <Input v-model="form.subscription_key_primary" type="password" placeholder="•••••" />
                     </div>
                     <div class="space-y-2">
-                        <Label>Clé secondaire (vide = inchangée)</Label>
+                        <Label>{{ t('compteDetail.edit.secondaryKeyUnchanged') }}</Label>
                         <Input v-model="form.subscription_key_secondary" type="password" placeholder="•••••" />
                     </div>
                 </div>
-                <Button :disabled="form.processing" @click="save">Enregistrer</Button>
+                <Button :disabled="form.processing" @click="save">{{ t('common.save') }}</Button>
             </div>
         </CutCard>
 
@@ -290,7 +291,7 @@ function clearCache() {
             <div class="p-5 flex items-start gap-3">
                 <span class="size-9 rounded-full bg-destructive/10 text-destructive grid place-items-center shrink-0"><AlertTriangle class="size-4" /></span>
                 <div>
-                    <div class="font-medium text-destructive text-sm">Dernière erreur de renouvellement</div>
+                    <div class="font-medium text-destructive text-sm">{{ t('compteDetail.lastRefreshError') }}</div>
                     <div class="text-xs text-muted-foreground mt-1 font-mono break-all">{{ account.lastError }}</div>
                 </div>
             </div>
@@ -299,16 +300,16 @@ function clearCache() {
         <!-- Infos token -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div class="rounded-[1.5rem] bg-white border border-[#E4DFCE] p-5">
-                <div class="text-xs text-muted-foreground mb-1">Refresh token expire</div>
+                <div class="text-xs text-muted-foreground mb-1">{{ t('compteDetail.refreshExpires') }}</div>
                 <div class="text-xl font-medium text-[#002C52]">{{ account.expires }}</div>
             </div>
             <div class="rounded-[1.5rem] bg-white border border-[#E4DFCE] p-5">
-                <div class="text-xs text-muted-foreground mb-1">Dernier renouvellement</div>
+                <div class="text-xs text-muted-foreground mb-1">{{ t('comptes.lastRefresh') }}</div>
                 <div class="text-xl font-medium text-[#002C52]">{{ account.lastRefresh }}</div>
-                <div class="text-xs text-muted-foreground mt-1">Access token jusqu'à {{ account.accessExpires }}</div>
+                <div class="text-xs text-muted-foreground mt-1">{{ t('compteDetail.accessTokenUntil', { time: account.accessExpires }) }}</div>
             </div>
             <div class="rounded-[1.5rem] bg-[#002C52] p-5">
-                <div class="text-xs text-[#9FB6D1] mb-1">Appels enregistrés</div>
+                <div class="text-xs text-[#9FB6D1] mb-1">{{ t('compteDetail.recordedCalls') }}</div>
                 <div class="text-xl font-medium text-white">{{ callCount }}</div>
             </div>
         </div>
@@ -318,19 +319,18 @@ function clearCache() {
             <CutCard>
                 <div class="p-5">
                     <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2"><FolderOpen class="size-4" /> Dossiers</h3>
+                        <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2"><FolderOpen class="size-4" /> {{ t('comptes.folders') }}</h3>
                         <div class="flex items-center gap-2">
                             <Button variant="outline" size="sm" @click="clearCache">
-                                <Trash2 class="size-3.5" /> Vider le cache
+                                <Trash2 class="size-3.5" /> {{ t('compteDetail.clearCache') }}
                             </Button>
                             <Button variant="outline" size="sm" :disabled="account.status !== 'connected'" @click="syncFolders">
-                                <RefreshCw class="size-3.5" /> Synchroniser
+                                <RefreshCw class="size-3.5" /> {{ t('compteDetail.sync') }}
                             </Button>
                         </div>
                     </div>
                     <p v-if="!folders.length" class="text-sm text-muted-foreground">
-                        Aucun dossier. Les dossiers sont découverts automatiquement depuis EBP à la connexion du compte ;
-                        cliquez sur « Synchroniser » une fois le compte connecté pour les récupérer.
+                        {{ t('compteDetail.foldersEmpty') }}
                     </p>
                     <div v-else class="space-y-1.5">
                         <div v-for="f in folders" :key="f.id" class="flex items-center gap-2.5 text-sm rounded-xl bg-primary/5 border border-primary/10 px-3 py-2.5">
@@ -346,14 +346,14 @@ function clearCache() {
             <!-- Jetons rattachés -->
             <CutCard>
                 <div class="p-5">
-                    <h3 class="text-base font-medium text-[#002C52] mb-3 flex items-center gap-2"><KeyRound class="size-4" /> Jetons d'apps rattachés</h3>
-                    <p v-if="!tokens.length" class="text-sm text-muted-foreground">Aucun jeton ne cible ce compte.</p>
+                    <h3 class="text-base font-medium text-[#002C52] mb-3 flex items-center gap-2"><KeyRound class="size-4" /> {{ t('compteDetail.attachedTokens') }}</h3>
+                    <p v-if="!tokens.length" class="text-sm text-muted-foreground">{{ t('compteDetail.noTokenTargets') }}</p>
                     <div v-else class="space-y-1.5">
-                        <div v-for="t in tokens" :key="t.name" class="flex items-center gap-2.5 text-sm rounded-xl bg-[#F6F2E4] px-3 py-2.5">
+                        <div v-for="tok in tokens" :key="tok.name" class="flex items-center gap-2.5 text-sm rounded-xl bg-[#F6F2E4] px-3 py-2.5">
                             <span class="size-7 rounded-full bg-primary/10 text-primary grid place-items-center shrink-0"><KeyRound class="size-3.5" /></span>
-                            <span class="font-medium text-[#002C52]">{{ t.name }}</span>
-                            <span class="text-xs text-muted-foreground">{{ t.lastUsed }}</span>
-                            <Badge :variant="t.active ? 'default' : 'secondary'" class="ml-auto">{{ t.active ? 'Actif' : 'Révoqué' }}</Badge>
+                            <span class="font-medium text-[#002C52]">{{ tok.name }}</span>
+                            <span class="text-xs text-muted-foreground">{{ tok.lastUsed }}</span>
+                            <Badge :variant="tok.active ? 'default' : 'secondary'" class="ml-auto">{{ tok.active ? t('compteDetail.tokenActive') : t('compteDetail.tokenRevoked') }}</Badge>
                         </div>
                     </div>
                 </div>
@@ -365,16 +365,15 @@ function clearCache() {
             <div class="p-5">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2">
-                        <Clock class="size-4" /> Journal d'activité
+                        <Clock class="size-4" /> {{ t('compteDetail.activityLog') }}
                     </h3>
                     <Button variant="outline" size="sm" :disabled="refreshing" @click="refreshLog">
-                        <RefreshCw class="size-3.5" :class="{ 'animate-spin': refreshing }" /> Actualiser
+                        <RefreshCw class="size-3.5" :class="{ 'animate-spin': refreshing }" /> {{ t('compteDetail.refresh') }}
                     </Button>
                 </div>
 
                 <p v-if="!log.length" class="text-sm text-muted-foreground">
-                    Aucun événement pour l'instant. Les connexions, renouvellements de token, refus,
-                    synchronisations de dossiers et actions sur les jetons apparaîtront ici.
+                    {{ t('compteDetail.logEmpty') }}
                 </p>
 
                 <ol v-else class="relative border-s border-[#E4DFCE] ms-3 space-y-5">
@@ -402,9 +401,9 @@ function clearCache() {
                 <!-- Sentinelle du scroll infini + indicateur -->
                 <div v-if="log.length" ref="sentinel" class="pt-4 text-center text-xs text-muted-foreground">
                     <span v-if="loadingMore" class="inline-flex items-center gap-1.5">
-                        <RefreshCw class="size-3.5 animate-spin" /> Chargement…
+                        <RefreshCw class="size-3.5 animate-spin" /> {{ t('common.loading') }}
                     </span>
-                    <span v-else-if="!hasMore">Début du journal.</span>
+                    <span v-else-if="!hasMore">{{ t('compteDetail.logStart') }}</span>
                 </div>
             </div>
         </CutCard>

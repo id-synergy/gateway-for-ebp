@@ -167,9 +167,9 @@ class IpController extends Controller
     private function message(IpEntry $entry): string
     {
         return match ($entry->status) {
-            IpEntry::STATUS_ALLOWED => "L'IP {$entry->ip} est autorisée (débit illimité).",
-            IpEntry::STATUS_BLOCKED => "L'IP {$entry->ip} est bloquée (403).",
-            default => "L'IP {$entry->ip} est enregistrée.",
+            IpEntry::STATUS_ALLOWED => __('messages.flash.ip_allowed', ['ip' => $entry->ip]),
+            IpEntry::STATUS_BLOCKED => __('messages.flash.ip_blocked', ['ip' => $entry->ip]),
+            default => __('messages.flash.ip_registered', ['ip' => $entry->ip]),
         };
     }
 }

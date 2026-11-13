@@ -324,12 +324,12 @@ class AdminController extends Controller
                 'ip' => $e->ip,
                 'userAgent' => $e->user_agent,
             ])->values(),
-            // Actions : mêmes libellés que /admin/audit (source unique AuditController::ACTION_LABELS).
+            // Actions : mêmes libellés que /admin/audit (source unique AuditController::actionLabels()).
             'actions' => $actions->map(fn (AdminAction $a) => [
                 'id' => $a->id,
                 'at' => $a->occurred_at->format('d/m/Y H:i:s'),
                 'action' => $a->action,
-                'actionLabel' => AuditController::ACTION_LABELS[$a->action] ?? $a->action,
+                'actionLabel' => AuditController::actionLabels()[$a->action] ?? $a->action,
                 'label' => $a->label,
                 'subjectType' => $a->subject_type ? class_basename($a->subject_type) : null,
                 'ip' => $a->ip,

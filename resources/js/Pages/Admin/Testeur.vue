@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, reactive, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { FlaskConical, Plus, Trash2, Send, AlertTriangle, Clock, Link2, History, BookMarked } from 'lucide-vue-next';
+
+const { t } = useI18n();
 
 const props = defineProps({
     accounts: { type: Array, default: () => [] },
@@ -166,11 +169,11 @@ function buildQuery() {
 function attemptRun() {
     formError.value = '';
     if (! accountId.value) {
-        formError.value = 'Sélectionnez un compte EBP.';
+        formError.value = t('testeur.errors.selectAccount');
         return;
     }
     if (endpoint.value.trim() === '') {
-        formError.value = "Renseignez l'endpoint EBP.";
+        formError.value = t('testeur.errors.enterEndpoint');
         return;
     }
     if (isWrite.value) {
@@ -213,17 +216,17 @@ async function run(confirmed) {
 
         if (res.status === 422) {
             const data = await res.json();
-            formError.value = data.message || Object.values(data.errors ?? {})[0]?.[0] || 'Requête invalide.';
+            formError.value = data.message || Object.values(data.errors ?? {})[0]?.[0] || t('testeur.errors.invalidRequest');
             return;
         }
         if (! res.ok && res.status !== 200) {
-            formError.value = `Erreur serveur (HTTP ${res.status}).`;
+            formError.value = t('testeur.errors.serverError', { status: res.status });
             return;
         }
 
         result.value = await res.json();
     } catch (e) {
-        formError.value = 'Échec de la requête : '+e.message;
+        formError.value = t('testeur.errors.requestFailed', { message: e.message });
     } finally {
         running.value = false;
     }
@@ -239,7 +242,7 @@ function statusVariant(s) {
 
 <template>
     <AdminLayout current="testeur">
-        <template #title>Testeur de requêtes EBP</template>
+        <template #title>{{ t('testeur.title') }}</template>
 
         <CutCard class="mb-4">
             <div class="p-5 space-y-4">
@@ -247,32 +250,28 @@ function statusVariant(s) {
                     <div class="size-10 shrink-0 rounded-xl bg-[#F6F2E4] grid place-items-center text-[#002C52]">
                         <FlaskConical class="size-5" />
                     </div>
-                    <p class="text-sm text-muted-foreground">
-                        Émet une vraie requête authentifiée vers l'API EBP via la gateway et affiche la réponse brute.
-                        N'importe quel endpoint EBP est accepté (pas de liste blanche), mais l'appel reste borné au host
-                        du compte choisi. Chaque appel apparaît dans les <strong class="text-[#002C52]">Logs</strong>.
-                    </p>
+                    <p class="text-sm text-muted-foreground" v-html="t('testeur.intro')" />
                 </div>
 
                 <!-- Compte / dossier / méthode -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="space-y-2">
-                        <Label>Compte EBP</Label>
+                        <Label>{{ t('testeur.account') }}</Label>
                         <select v-model="accountId" @change="onAccountChange"
                                 class="gw-select w-full h-11 rounded-xl border border-input bg-background px-4 text-sm">
                             <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.label }}</option>
                         </select>
                     </div>
                     <div class="space-y-2">
-                        <Label>Dossier (optionnel)</Label>
+                        <Label>{{ t('testeur.folder') }}</Label>
                         <select v-model="folderId"
                                 class="gw-select w-full h-11 rounded-xl border border-input bg-background px-4 text-sm">
-                            <option :value="null">— aucun</option>
+                            <option :value="null">{{ t('testeur.folderNone') }}</option>
                             <option v-for="f in currentFolders" :key="f.id" :value="f.id">{{ f.label }}</option>
                         </select>
                     </div>
                     <div class="space-y-2">
-                        <Label>Méthode HTTP</Label>
+                        <Label>{{ t('testeur.httpMethod') }}</Label>
                         <select v-model="method"
                                 class="gw-select w-full h-11 rounded-xl border border-input bg-background px-4 text-sm">
                             <option v-for="m in HTTP_METHODS" :key="m" :value="m">{{ m }}</option>
@@ -282,7 +281,7 @@ function statusVariant(s) {
 
                 <!-- Endpoint (champ libre + autocomplétion) -->
                 <div class="space-y-2">
-                    <Label>Endpoint EBP</Label>
+                    <Label>{{ t('testeur.endpoint') }}</Label>
                     <div ref="endpointBox" class="relative">
                         <Input v-model="endpoint" class="font-mono" autocomplete="off"
                                placeholder="gescom/api/v1/Folders/405032/Items/ItemsExtentedQuery"
@@ -293,7 +292,7 @@ function statusVariant(s) {
                              class="absolute z-30 mt-1 w-full max-h-96 overflow-auto rounded-xl border border-[#E4DFCE] bg-white shadow-lg">
                             <div v-if="filteredHistory.length">
                                 <div class="flex items-center gap-2 px-4 py-2 text-xs font-medium text-muted-foreground bg-[#F6F2E4]">
-                                    <History class="size-3.5" /> Déjà appelés
+                                    <History class="size-3.5" /> {{ t('testeur.suggestions.history') }}
                                 </div>
                                 <button v-for="(h, i) in filteredHistory" :key="`h${i}`" type="button"
                                         class="w-full text-left px-4 py-2 hover:bg-black/5 transition-colors"
@@ -302,12 +301,12 @@ function statusVariant(s) {
                                         <Badge variant="secondary" class="shrink-0">{{ h.method }}</Badge>
                                         <span class="font-mono text-xs text-[#002C52] break-all">{{ h.endpoint }}</span>
                                     </div>
-                                    <div class="text-[11px] text-muted-foreground mt-0.5">Dernier appel : {{ h.lastCall }}</div>
+                                    <div class="text-[11px] text-muted-foreground mt-0.5">{{ t('testeur.suggestions.lastCall', { when: h.lastCall }) }}</div>
                                 </button>
                             </div>
                             <div v-if="filteredCatalog.length">
                                 <div class="flex items-center gap-2 px-4 py-2 text-xs font-medium text-muted-foreground bg-[#F6F2E4]">
-                                    <BookMarked class="size-3.5" /> Catalogue EBP
+                                    <BookMarked class="size-3.5" /> {{ t('testeur.suggestions.catalog') }}
                                 </div>
                                 <button v-for="(e, i) in filteredCatalog" :key="`c${i}`" type="button"
                                         class="w-full text-left px-4 py-2 hover:bg-black/5 transition-colors"
@@ -322,31 +321,31 @@ function statusVariant(s) {
                         </div>
                     </div>
                     <p class="text-xs text-muted-foreground">
-                        Chemin relatif, sans le host. Le slash de début est optionnel. Choisissez une suggestion ou saisissez librement.
+                        {{ t('testeur.endpointHint') }}
                     </p>
                 </div>
 
                 <!-- Paramètres de query -->
                 <div class="space-y-2">
-                    <Label>Paramètres de query</Label>
+                    <Label>{{ t('testeur.queryParams') }}</Label>
                     <div v-for="(row, i) in queryRows" :key="i" class="flex items-center gap-2">
-                        <Input v-model="row.key" class="flex-1 font-mono" placeholder="clé (ex. $top)" />
-                        <Input v-model="row.value" class="flex-1 font-mono" placeholder="valeur" />
-                        <button type="button" aria-label="Retirer" @click="removeRow(i)"
+                        <Input v-model="row.key" class="flex-1 font-mono" :placeholder="t('testeur.queryKeyPlaceholder')" />
+                        <Input v-model="row.value" class="flex-1 font-mono" :placeholder="t('testeur.queryValuePlaceholder')" />
+                        <button type="button" :aria-label="t('common.delete')" @click="removeRow(i)"
                                 class="shrink-0 size-9 rounded-xl grid place-items-center text-muted-foreground hover:bg-black/5 hover:text-destructive transition-colors">
                             <Trash2 class="size-4" />
                         </button>
                     </div>
-                    <Button variant="outline" size="sm" @click="addRow"><Plus class="size-4" /> Ajouter un paramètre</Button>
+                    <Button variant="outline" size="sm" @click="addRow"><Plus class="size-4" /> {{ t('testeur.addParam') }}</Button>
                 </div>
 
                 <!-- Corps JSON (écritures seulement) -->
                 <div v-if="isWrite" class="space-y-2">
-                    <Label>Corps JSON</Label>
+                    <Label>{{ t('testeur.jsonBody') }}</Label>
                     <textarea v-model="bodyText" rows="8"
                               class="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm font-mono"
-                              placeholder='{ "Caption": "Mon article" }'></textarea>
-                    <p class="text-xs text-muted-foreground">JSON valide attendu pour {{ method }}.</p>
+                              placeholder='{ "Caption": "..." }'></textarea>
+                    <p class="text-xs text-muted-foreground">{{ t('testeur.jsonBodyHint', { method }) }}</p>
                 </div>
 
                 <p v-if="formError" class="text-sm text-destructive flex items-center gap-2">
@@ -355,9 +354,9 @@ function statusVariant(s) {
 
                 <div class="flex items-center gap-3">
                     <Button :disabled="running" @click="attemptRun">
-                        <Send class="size-4" /> {{ running ? 'Envoi…' : 'Envoyer la requête' }}
+                        <Send class="size-4" /> {{ running ? t('testeur.sending') : t('testeur.send') }}
                     </Button>
-                    <Badge v-if="isWrite" variant="destructive">Écriture réelle</Badge>
+                    <Badge v-if="isWrite" variant="destructive">{{ t('testeur.realWrite') }}</Badge>
                 </div>
             </div>
         </CutCard>
@@ -366,9 +365,9 @@ function statusVariant(s) {
         <CutCard v-if="result">
             <div class="p-5 space-y-4">
                 <div class="flex items-center justify-between flex-wrap gap-3">
-                    <h3 class="text-base font-medium text-[#002C52]">Réponse</h3>
+                    <h3 class="text-base font-medium text-[#002C52]">{{ t('testeur.response') }}</h3>
                     <div class="flex items-center gap-3">
-                        <Badge :variant="statusVariant(result.status)">{{ result.status || 'réseau' }}</Badge>
+                        <Badge :variant="statusVariant(result.status)">{{ result.status || t('testeur.network') }}</Badge>
                         <span class="text-xs text-muted-foreground inline-flex items-center gap-1">
                             <Clock class="size-3.5" /> {{ result.durationMs }} ms
                         </span>
@@ -385,10 +384,10 @@ function statusVariant(s) {
                 </p>
 
                 <div v-if="result.body !== null">
-                    <div class="text-xs text-muted-foreground mb-2">Corps de réponse EBP</div>
+                    <div class="text-xs text-muted-foreground mb-2">{{ t('testeur.responseBody') }}</div>
                     <pre class="rounded-xl bg-[#002C52] text-[#DCE7F5] text-xs p-4 overflow-auto max-h-[32rem]">{{ result.body }}</pre>
                 </div>
-                <p v-else-if="! result.error" class="text-sm text-muted-foreground">Corps vide.</p>
+                <p v-else-if="! result.error" class="text-sm text-muted-foreground">{{ t('testeur.emptyBody') }}</p>
             </div>
         </CutCard>
 
@@ -400,19 +399,16 @@ function statusVariant(s) {
                         <AlertTriangle class="size-5" />
                     </div>
                     <div>
-                        <h3 class="text-base font-medium text-[#002C52]">Modifier des données réelles dans EBP ?</h3>
-                        <p class="text-sm text-muted-foreground mt-1">
-                            Cette requête <strong class="text-[#002C52] font-mono">{{ method }}</strong> écrit dans la
-                            gestion commerciale réelle du compte sélectionné. L'opération peut être irréversible.
-                        </p>
+                        <h3 class="text-base font-medium text-[#002C52]">{{ t('testeur.confirmWrite.title') }}</h3>
+                        <p class="text-sm text-muted-foreground mt-1" v-html="t('testeur.confirmWrite.body', { method })" />
                     </div>
                 </div>
                 <div class="rounded-xl bg-[#F6F2E4] text-[#002C52] text-xs p-3 font-mono break-all">
                     {{ method }} /{{ endpoint.replace(/^\//, '') }}
                 </div>
                 <div class="flex justify-end gap-3">
-                    <Button variant="outline" @click="confirmOpen = false">Annuler</Button>
-                    <Button variant="destructive" :disabled="running" @click="confirmWrite">Confirmer l'écriture</Button>
+                    <Button variant="outline" @click="confirmOpen = false">{{ t('common.cancel') }}</Button>
+                    <Button variant="destructive" :disabled="running" @click="confirmWrite">{{ t('testeur.confirmWrite.confirm') }}</Button>
                 </div>
             </div>
         </div>

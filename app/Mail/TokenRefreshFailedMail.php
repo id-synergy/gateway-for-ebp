@@ -23,7 +23,7 @@ class TokenRefreshFailedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "[Gateway EBP] Échec de renouvellement — compte {$this->account->label}",
+            subject: "[Gateway EBP] Échec de renouvellement / renewal failed — compte {$this->account->label}",
         );
     }
 

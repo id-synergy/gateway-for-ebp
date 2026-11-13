@@ -10,44 +10,50 @@ import {
 import GatewayLogo from '@/components/GatewayLogo.vue';
 import Toasts from '@/components/Toasts.vue';
 
+import { useI18n } from 'vue-i18n';
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
+
+const { t } = useI18n();
+
 // Navigation en dur, groupée par famille pour garder une sidebar cohérente :
 // pilotage (vue d'ensemble), configuration (ce qu'on administre), journaux
-// (ce qu'on consulte), outils. Les fiches « par personne » (détail admin,
-// détail compte) ne figurent pas ici : on y accède par clic depuis les listes.
-const navGroups = [
+// (ce qu'on consulte), outils. Les libellés passent par i18n (clés nav.*). Les
+// fiches « par personne » (détail admin, détail compte) ne figurent pas ici :
+// on y accède par clic depuis les listes.
+const navGroups = computed(() => [
     {
-        title: 'Pilotage',
+        title: t('nav.groups.pilotage'),
         items: [
-            { label: 'Tableau de bord', icon: LayoutDashboard, href: '/admin', key: 'dashboard' },
-            { label: 'Supervision', icon: Activity, href: '/admin/supervision', key: 'supervision' },
+            { label: t('nav.dashboard'), icon: LayoutDashboard, href: '/admin', key: 'dashboard' },
+            { label: t('nav.supervision'), icon: Activity, href: '/admin/supervision', key: 'supervision' },
         ],
     },
     {
-        title: 'Configuration',
+        title: t('nav.groups.configuration'),
         items: [
-            { label: 'Comptes EBP', icon: Plug, href: '/admin/comptes', key: 'comptes' },
-            { label: "Jetons d'apps", icon: KeyRound, href: '/admin/jetons', key: 'jetons' },
-            { label: 'Admins', icon: Users, href: '/admin/admins', key: 'admins' },
-            { label: 'IP', icon: Network, href: '/admin/ip', key: 'ip' },
+            { label: t('nav.comptes'), icon: Plug, href: '/admin/comptes', key: 'comptes' },
+            { label: t('nav.jetons'), icon: KeyRound, href: '/admin/jetons', key: 'jetons' },
+            { label: t('nav.admins'), icon: Users, href: '/admin/admins', key: 'admins' },
+            { label: t('nav.ip'), icon: Network, href: '/admin/ip', key: 'ip' },
         ],
     },
     {
-        title: 'Journaux',
+        title: t('nav.groups.journaux'),
         items: [
-            { label: 'Connexions', icon: LogIn, href: '/admin/connexions', key: 'connexions' },
-            { label: 'Audit', icon: History, href: '/admin/audit', key: 'audit' },
-            { label: 'Logs', icon: ScrollText, href: '/admin/logs', key: 'logs' },
-            { label: 'Jobs', icon: ListChecks, href: '/admin/jobs', key: 'jobs' },
+            { label: t('nav.connexions'), icon: LogIn, href: '/admin/connexions', key: 'connexions' },
+            { label: t('nav.audit'), icon: History, href: '/admin/audit', key: 'audit' },
+            { label: t('nav.logs'), icon: ScrollText, href: '/admin/logs', key: 'logs' },
+            { label: t('nav.jobs'), icon: ListChecks, href: '/admin/jobs', key: 'jobs' },
         ],
     },
     {
-        title: 'Outils',
+        title: t('nav.groups.outils'),
         items: [
-            { label: 'Testeur EBP', icon: FlaskConical, href: '/admin/testeur', key: 'testeur' },
-            { label: 'API & doc', icon: BookOpen, href: '/admin/api', key: 'api' },
+            { label: t('nav.testeur'), icon: FlaskConical, href: '/admin/testeur', key: 'testeur' },
+            { label: t('nav.api'), icon: BookOpen, href: '/admin/api', key: 'api' },
         ],
     },
-];
+]);
 
 defineProps({ current: { type: String, default: '' } });
 
@@ -92,10 +98,10 @@ function logout() {
                     <Avatar class="size-8 shrink-0"><AvatarFallback class="bg-sidebar-accent text-sidebar-accent-foreground">{{ initials }}</AvatarFallback></Avatar>
                     <div class="flex-1 leading-tight min-w-0">
                         <div class="text-sm font-medium text-sidebar-foreground truncate">{{ userName }}</div>
-                        <div class="text-xs text-sidebar-foreground/60">Voir mon profil</div>
+                        <div class="text-xs text-sidebar-foreground/60">{{ t('nav.viewProfile') }}</div>
                     </div>
                 </Link>
-                <button type="button" aria-label="Se déconnecter" @click="logout"
+                <button type="button" :aria-label="t('nav.logout')" @click="logout"
                         class="shrink-0 size-9 rounded-xl grid place-items-center text-sidebar-foreground/60 hover:bg-white/10 hover:text-sidebar-foreground transition-colors">
                     <LogOut class="size-4" />
                 </button>
@@ -105,7 +111,10 @@ function logout() {
         <div class="flex-1 flex flex-col min-w-0">
             <header class="h-[72px] border-b border-border flex items-center px-8">
                 <h1 class="text-xl font-medium text-[#002C52] dark:text-foreground"><slot name="title">Gateway EBP</slot></h1>
-                <div class="ml-auto"><slot name="actions" /></div>
+                <div class="ml-auto flex items-center gap-3">
+                    <slot name="actions" />
+                    <LocaleSwitcher />
+                </div>
             </header>
             <main class="flex-1 p-8 max-w-6xl w-full">
                 <slot />

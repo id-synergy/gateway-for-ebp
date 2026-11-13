@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Badge } from '@/components/ui/badge';
 import CutCard from '@/components/CutCard.vue';
@@ -9,6 +10,9 @@ import {
 } from '@/components/ui/table';
 
 import { router } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 defineProps({ jobs: { type: Array, default: () => [] } });
 
@@ -16,32 +20,32 @@ function open(id) {
     router.get(`/admin/jobs/${id}`);
 }
 
-const statusBadge = {
-    pending: { text: 'En attente', variant: 'secondary' },
-    running: { text: 'En cours', variant: 'default' },
-    done: { text: 'Terminé', variant: 'default' },
-    partial: { text: 'Partiel', variant: 'secondary' },
-    failed: { text: 'Échec', variant: 'destructive' },
-};
+const statusBadge = computed(() => ({
+    pending: { text: t('jobs.status.pending'), variant: 'secondary' },
+    running: { text: t('jobs.status.running'), variant: 'default' },
+    done: { text: t('jobs.status.done'), variant: 'default' },
+    partial: { text: t('jobs.status.partial'), variant: 'secondary' },
+    failed: { text: t('jobs.status.failed'), variant: 'destructive' },
+}));
 </script>
 
 <template>
     <AdminLayout current="jobs">
-        <template #title>Jobs</template>
+        <template #title>{{ t('jobs.title') }}</template>
 
         <CutCard>
-            <EmptyState v-if="!jobs.length" :icon="ListChecks" title="Aucun job"
-                text="Les requêtes lourdes (lots, requêtes composites) basculées en file apparaîtront ici avec leur progression." />
+            <EmptyState v-if="!jobs.length" :icon="ListChecks" :title="t('jobs.empty.title')"
+                :text="t('jobs.empty.text')" />
             <div v-else class="p-5">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Job ID</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Application</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Progression</TableHead>
-                            <TableHead class="text-right">Statut</TableHead>
+                            <TableHead>{{ t('jobs.columns.jobId') }}</TableHead>
+                            <TableHead>{{ t('jobs.columns.type') }}</TableHead>
+                            <TableHead>{{ t('jobs.columns.application') }}</TableHead>
+                            <TableHead>{{ t('jobs.columns.description') }}</TableHead>
+                            <TableHead>{{ t('jobs.columns.progress') }}</TableHead>
+                            <TableHead class="text-right">{{ t('common.status') }}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
