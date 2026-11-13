@@ -2,10 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\BlockedRequestEvent;
 use App\Services\Security\IpAccessControl;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Date;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * Blocage applicatif des IP en liste noire (ip_entries, status=blocked).
@@ -22,6 +25,8 @@ class BlockBannedIps
     public function handle(Request $request, Closure $next): Response
     {
         if ($this->ipAccess->isBlocked($request->ip())) {
+            $this->recordBlocked($request);
+
             return response()->json([
                 'error' => 'ip_blocked',
                 'message' => 'Accès refusé : cette adresse IP est bloquée.',
@@ -29,5 +34,23 @@ class BlockBannedIps
         }
 
         return $next($request);
+    }
+
+    /**
+     * Journalise a minima la tentative bloquée (best-effort, sans secret).
+     * N'altère jamais la réponse 403 : toute erreur d'écriture est silencieuse.
+     */
+    private function recordBlocked(Request $request): void
+    {
+        try {
+            BlockedRequestEvent::create([
+                'occurred_at' => Date::now(),
+                'ip' => $request->ip(),
+                'path' => $request->path(),
+                'method' => $request->method(),
+            ]);
+        } catch (Throwable) {
+            // Journal secondaire : ne jamais faire échouer le blocage sur une erreur d'écriture.
+        }
     }
 }
