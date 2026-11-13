@@ -164,6 +164,51 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Détection d'activité anormale (sécurité / charge)
+    |--------------------------------------------------------------------------
+    | Évaluée par la commande gateway:detect-anomalies (planifiée, voir
+    | routes/console.php). Chaque règle compte des événements sur une FENÊTRE
+    | GLISSANTE (en minutes) et alerte au-delà du seuil. Un même signal ne
+    | ré-alerte pas avant l'expiration d'un délai de silence (anti-spam, via cache).
+    |
+    | Mettre un seuil à 0 désactive la règle correspondante.
+    */
+    'anomaly' => [
+        // Fenêtre d'observation commune, en minutes.
+        'window_minutes' => (int) env('ANOMALY_WINDOW_MINUTES', 15),
+
+        // Délai de silence anti-spam, en minutes : pas de 2e alerte du même signal
+        // (même type + même clé) avant ce délai. Par défaut = la fenêtre.
+        'cooldown_minutes' => (int) env('ANOMALY_COOLDOWN_MINUTES', 15),
+
+        // Pic de 429 relayés par EBP (quota amont) dans request_logs sur la fenêtre.
+        // NB : les 429 de rate-limit gateway (bridage d'IP non autorisée) et les 403
+        // de blocage ne passent pas par request_logs (court-circuit middleware) ;
+        // ils sont couverts par les règles blocked_ip et login à part.
+        'rate_limit_spike' => [
+            'threshold' => (int) env('ANOMALY_RATE_LIMIT_THRESHOLD', 20),
+        ],
+
+        // Rafale de 403 ip_blocked (IP en liste noire qui insiste), journalisée a
+        // minima dans blocked_request_events par le middleware BlockBannedIps.
+        'blocked_ip' => [
+            // Seuil GLOBAL (toutes IP confondues) sur la fenêtre.
+            'global_threshold' => (int) env('ANOMALY_BLOCKED_IP_GLOBAL_THRESHOLD', 50),
+            // Seuil PAR IP : une seule IP qui martèle au-delà de ce nombre.
+            'per_ip_threshold' => (int) env('ANOMALY_BLOCKED_IP_PER_IP_THRESHOLD', 20),
+        ],
+
+        // Échecs de login admin (admin_auth_events event=failed) sur la fenêtre.
+        'login_failures' => [
+            // Seuil PAR IP source.
+            'per_ip_threshold' => (int) env('ANOMALY_LOGIN_PER_IP_THRESHOLD', 5),
+            // Seuil PAR e-mail visé (bourrage ciblé d'un compte).
+            'per_email_threshold' => (int) env('ANOMALY_LOGIN_PER_EMAIL_THRESHOLD', 5),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Sécurité
     |--------------------------------------------------------------------------
     | enforce_2fa : impose la 2FA pour accéder au back-office (login fort).
