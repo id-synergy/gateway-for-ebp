@@ -140,6 +140,9 @@ function initials(name) {
                         <div class="text-xs text-muted-foreground flex items-center gap-1 truncate">
                             <Mail class="size-3 shrink-0" /> {{ u.email }}
                         </div>
+                        <div class="text-xs text-muted-foreground flex items-center gap-1 truncate mt-0.5">
+                            <Clock class="size-3 shrink-0" /> {{ u.lastLoginAt ? `Dernière connexion : ${u.lastLoginAt}` : 'Jamais connecté' }}
+                        </div>
                         <div class="flex flex-wrap gap-1.5 mt-2.5">
                             <Badge v-if="u.twoFa" variant="default" class="gap-1"><ShieldCheck class="size-3" /> 2FA</Badge>
                             <Badge v-else variant="secondary">2FA désactivée</Badge>

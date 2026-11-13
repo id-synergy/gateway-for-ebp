@@ -2,11 +2,18 @@
 
 namespace App\Providers;
 
+use App\Listeners\RecordAdminAuthEvent;
 use App\Services\Security\IpAccessControl;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
+use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +31,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+        $this->registerAdminAuthEventListeners();
+    }
+
+    /**
+     * Journal de connexion des admins : on branche un listener sur les events
+     * d'authentification Laravel/Fortify (cf. App\Listeners\RecordAdminAuthEvent).
+     */
+    protected function registerAdminAuthEventListeners(): void
+    {
+        Event::listen(Login::class, [RecordAdminAuthEvent::class, 'handleLogin']);
+        Event::listen(Logout::class, [RecordAdminAuthEvent::class, 'handleLogout']);
+        Event::listen(Failed::class, [RecordAdminAuthEvent::class, 'handleFailed']);
+        Event::listen(ValidTwoFactorAuthenticationCodeProvided::class, [RecordAdminAuthEvent::class, 'handleTwoFactorPassed']);
+        Event::listen(TwoFactorAuthenticationFailed::class, [RecordAdminAuthEvent::class, 'handleTwoFactorFailed']);
     }
 
     /**
