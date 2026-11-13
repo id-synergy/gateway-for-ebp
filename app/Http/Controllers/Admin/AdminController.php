@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccountEvent;
+use App\Models\AdminAuthEvent;
 use App\Models\AlertLog;
 use App\Models\AppToken;
 use App\Models\EbpAccount;
@@ -15,6 +16,7 @@ use App\Services\Apps\RoutePatternCatalog;
 use App\Services\Ebp\QuotaRegulator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -234,6 +236,13 @@ class AdminController extends Controller
 
         $users = User::with('notificationPreferences')->get();
 
+        // Dernière connexion par admin (dernier event login), en une requête groupée.
+        $lastLogins = AdminAuthEvent::where('event', AdminAuthEvent::EVENT_LOGIN)
+            ->whereNotNull('user_id')
+            ->selectRaw('user_id, MAX(occurred_at) as last_login')
+            ->groupBy('user_id')
+            ->pluck('last_login', 'user_id');
+
         return Inertia::render('Admin/Admins', [
             'admins' => $users->map(fn ($u) => [
                 'id' => $u->id,
@@ -242,6 +251,9 @@ class AdminController extends Controller
                 'twoFa' => $u->two_factor_confirmed_at !== null,
                 'defaultContact' => $u->is_default_contact,
                 'active' => $u->is_active,
+                'lastLoginAt' => isset($lastLogins[$u->id])
+                    ? Carbon::parse($lastLogins[$u->id])->format('d/m/Y H:i')
+                    : null,
             ]),
             'preferences' => collect($types)->map(fn ($type) => [
                 'type' => $type,

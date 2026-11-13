@@ -1,9 +1,18 @@
 <?php
 
+use App\Exceptions\Ebp\DailyQuotaExceededException;
+use App\Exceptions\Ebp\EbpApiException;
+use App\Exceptions\Ebp\EbpAuthException;
+use App\Http\Middleware\AuthenticateAppToken;
+use App\Http\Middleware\BlockBannedIps;
+use App\Http\Middleware\EnsureTwoFactorEnabled;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\TrackAdminSessionExpiry;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,17 +21,18 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         // Miroir des endpoints EBP officiels, à la racine (/gescom/api/v1/...), stateless.
-        then: fn () => Illuminate\Support\Facades\Route::group([], base_path('routes/mirror.php')),
+        then: fn () => Route::group([], base_path('routes/mirror.php')),
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
+            HandleInertiaRequests::class,
         ]);
 
         $middleware->alias([
-            'app.token' => \App\Http\Middleware\AuthenticateAppToken::class,
-            '2fa' => \App\Http\Middleware\EnsureTwoFactorEnabled::class,
-            'block.ip' => \App\Http\Middleware\BlockBannedIps::class,
+            'app.token' => AuthenticateAppToken::class,
+            '2fa' => EnsureTwoFactorEnabled::class,
+            'block.ip' => BlockBannedIps::class,
+            'track.session' => TrackAdminSessionExpiry::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -48,7 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // L'API EBP a répondu une erreur : on la relaie en 502 Bad Gateway propre
         // (la gateway est un intermédiaire), sans exposer la trace. Le statut EBP d'origine
         // est donné pour diagnostic ; 429 (quota EBP) est relayé tel quel.
-        $exceptions->render(function (\App\Exceptions\Ebp\EbpApiException $e, Request $request) {
+        $exceptions->render(function (EbpApiException $e, Request $request) {
             return response()->json([
                 'error' => 'ebp_upstream_error',
                 'message' => "L'API EBP a renvoyé une erreur.",
@@ -57,7 +67,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // Quota journalier EBP épuisé côté gateway.
-        $exceptions->render(function (\App\Exceptions\Ebp\DailyQuotaExceededException $e, Request $request) {
+        $exceptions->render(function (DailyQuotaExceededException $e, Request $request) {
             return response()->json([
                 'error' => 'daily_quota_exceeded',
                 'message' => 'Quota journalier EBP atteint pour la gateway.',
@@ -66,7 +76,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Compte EBP non authentifié (token absent, ou renouvellement OAuth échoué) :
         // ce n'est pas une faute de l'app, le compte doit être reconnecté par un admin.
-        $exceptions->render(function (\App\Exceptions\Ebp\EbpAuthException $e, Request $request) {
+        $exceptions->render(function (EbpAuthException $e, Request $request) {
             return response()->json([
                 'error' => 'ebp_account_unauthenticated',
                 'message' => $e->getMessage(),

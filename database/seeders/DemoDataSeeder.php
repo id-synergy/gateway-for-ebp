@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AdminAuthEvent;
 use App\Models\EbpAccount;
 use App\Models\EbpFolder;
 use App\Models\EbpToken;
@@ -60,6 +61,30 @@ class DemoDataSeeder extends Seeder
         // IP : une autorisée (débit illimité), une bloquée (403).
         IpEntry::updateOrCreate(['ip' => '203.0.113.10'], ['label' => 'Site exemple', 'status' => 'allowed', 'created_by' => $admin->id]);
         IpEntry::updateOrCreate(['ip' => '198.51.100.66'], ['label' => 'Scan abusif', 'status' => 'blocked', 'created_by' => $admin->id]);
+
+        // Journal de connexion des admins : quelques événements d'exemple (démo).
+        if (AdminAuthEvent::count() === 0) {
+            $ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+            $samples = [
+                [$admin, 'demo@gateway.test', AdminAuthEvent::EVENT_LOGIN, '203.0.113.10', 5],
+                [$admin, 'demo@gateway.test', AdminAuthEvent::EVENT_TWO_FACTOR_PASSED, '203.0.113.10', 5],
+                [null, 'inconnu@exemple.fr', AdminAuthEvent::EVENT_FAILED, '198.51.100.66', 40],
+                [$admin2, 'demo2@gateway.test', AdminAuthEvent::EVENT_LOGIN, '203.0.113.11', 80],
+                [$admin2, 'demo2@gateway.test', AdminAuthEvent::EVENT_TWO_FACTOR_FAILED, '203.0.113.11', 80],
+                [$admin, 'demo@gateway.test', AdminAuthEvent::EVENT_SESSION_EXPIRED, '203.0.113.10', 180],
+                [$admin, 'demo@gateway.test', AdminAuthEvent::EVENT_LOGOUT, '203.0.113.10', 200],
+            ];
+            foreach ($samples as [$user, $email, $event, $ip, $minutesAgo]) {
+                AdminAuthEvent::create([
+                    'user_id' => $user?->id,
+                    'email' => $email,
+                    'event' => $event,
+                    'ip' => $ip,
+                    'user_agent' => $ua,
+                    'occurred_at' => now()->subMinutes($minutesAgo),
+                ]);
+            }
+        }
 
         // Quelques logs d'exemple.
         if (RequestLog::count() === 0) {
