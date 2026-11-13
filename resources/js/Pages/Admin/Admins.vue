@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Plus, ShieldCheck, Mail, Send, Clock, Trash2 } from 'lucide-vue-next';
+import { Plus, ShieldCheck, Mail, Send, Clock, Trash2, ArrowRight } from 'lucide-vue-next';
 
 const props = defineProps({
     admins: { type: Array, default: () => [] },
@@ -136,7 +136,7 @@ function initials(name) {
                         {{ initials(u.name) }}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="font-medium text-[#002C52] truncate">{{ u.name }}</div>
+                        <Link :href="`/admin/admins/${u.id}`" class="font-medium text-[#002C52] truncate block hover:underline">{{ u.name }}</Link>
                         <div class="text-xs text-muted-foreground flex items-center gap-1 truncate">
                             <Mail class="size-3 shrink-0" /> {{ u.email }}
                         </div>
@@ -152,7 +152,12 @@ function initials(name) {
                             </Badge>
                         </div>
                     </div>
-                    <Button variant="outline" size="sm" @click="toggle(u)">{{ u.active ? 'Désactiver' : 'Réactiver' }}</Button>
+                    <div class="flex flex-col items-end gap-1.5 shrink-0">
+                        <Button variant="outline" size="sm" @click="toggle(u)">{{ u.active ? 'Désactiver' : 'Réactiver' }}</Button>
+                        <Link :href="`/admin/admins/${u.id}`" class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[#002C52]">
+                            Détail <ArrowRight class="size-3" />
+                        </Link>
+                    </div>
                 </div>
             </CutCard>
         </div>

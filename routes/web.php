@@ -69,7 +69,8 @@ Route::prefix('admin')->middleware(['block.ip', 'track.session', 'auth', '2fa'])
     Route::post('/comptes/{account}/sync-folders', [AdminActionController::class, 'syncFolders'])->name('admin.comptes.sync-folders');
     Route::post('/comptes/{account}/manual-token', [EbpOAuthController::class, 'manualExchange'])->name('admin.comptes.manual-token');
     Route::get('/jetons', [AdminController::class, 'jetons']);
-    Route::get('/admins', [AdminController::class, 'admins']);
+    Route::get('/admins', [AdminController::class, 'admins'])->name('admin.admins.index');
+    Route::get('/admins/{user}', [AdminController::class, 'admin'])->name('admin.admins.show');
     Route::get('/connexions', [ConnexionLogController::class, 'index'])->name('admin.connexions.index');
     Route::get('/audit', [AuditController::class, 'index'])->name('admin.audit.index');
     Route::get('/ip', [IpController::class, 'index'])->name('admin.ip.index');
