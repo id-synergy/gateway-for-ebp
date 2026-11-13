@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AccountEvent;
 use App\Models\AdminAction;
 use App\Models\AdminAuthEvent;
 use App\Models\EbpAccount;
@@ -57,6 +58,31 @@ class DemoDataSeeder extends Seeder
         if ($account->appTokens()->count() === 0) {
             $tokens->create('Logiciel tickets', $account, $folder);
             $tokens->create('Pilotage', $account, $folder);
+        }
+
+        // Journal d'activité du compte (timeline de la fiche) : cycle de vie d'exemple.
+        // Types et libellés calqués sur AccountEventLogger. Du plus récent au plus ancien
+        // via occurred_at ; aucun secret (jamais de token/clé), contexte utile seulement.
+        if ($account->events()->count() === 0) {
+            $events = [
+                ['token_refreshed', 'info', 'Token d\'accès renouvelé automatiquement.', null, 360],
+                ['cache_cleared', 'info', 'Cache de lecture du compte vidé.', ['scope' => 'account'], 180],
+                ['app_token_created', 'info', 'Jeton d\'app créé : « Pilotage ».', ['app' => 'Pilotage'], 220],
+                ['folders_synced', 'info', 'Dossiers synchronisés depuis EBP (1).', ['count' => 1], 300],
+                ['refresh_failed', 'error', 'Échec du renouvellement du token.', ['error' => 'HTTP 401 — refresh_token expiré'], 1500],
+                ['reconnected', 'success', 'Compte reconnecté à EBP.', null, 1440],
+                ['connected', 'success', 'Compte connecté à EBP.', null, 4320],
+            ];
+            foreach ($events as [$type, $level, $message, $context, $minutesAgo]) {
+                AccountEvent::create([
+                    'ebp_account_id' => $account->id,
+                    'type' => $type,
+                    'level' => $level,
+                    'message' => $message,
+                    'context' => $context,
+                    'occurred_at' => now()->subMinutes($minutesAgo),
+                ]);
+            }
         }
 
         // IP : une autorisée (débit illimité), une bloquée (403).
