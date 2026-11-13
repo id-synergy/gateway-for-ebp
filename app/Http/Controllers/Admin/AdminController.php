@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AccountEvent;
 use App\Models\AlertLog;
-use App\Models\AllowedIp;
 use App\Models\AppToken;
 use App\Models\EbpAccount;
 use App\Models\GatewayJob;
@@ -256,19 +255,6 @@ class AdminController extends Controller
                 'name' => $i->name,
                 'email' => $i->email,
                 'expiresIn' => $i->expires_at->diffForHumans(),
-            ]),
-        ]);
-    }
-
-    public function ip(): Response
-    {
-        return Inertia::render('Admin/Ip', [
-            'ips' => AllowedIp::with('creator')->orderByDesc('created_at')->get()->map(fn ($i) => [
-                'id' => $i->id,
-                'ip' => $i->ip,
-                'label' => $i->label,
-                'by' => $i->creator?->name ?? '—',
-                'at' => $i->created_at->format('d/m/Y'),
             ]),
         ]);
     }

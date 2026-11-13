@@ -16,7 +16,7 @@ const nav = [
     { label: 'Comptes EBP', icon: Plug, href: '/admin/comptes', key: 'comptes' },
     { label: "Jetons d'apps", icon: KeyRound, href: '/admin/jetons', key: 'jetons' },
     { label: 'Admins', icon: Users, href: '/admin/admins', key: 'admins' },
-    { label: 'IP autorisées', icon: Network, href: '/admin/ip', key: 'ip' },
+    { label: 'IP', icon: Network, href: '/admin/ip', key: 'ip' },
     { label: 'Logs', icon: ScrollText, href: '/admin/logs', key: 'logs' },
     { label: 'Testeur EBP', icon: FlaskConical, href: '/admin/testeur', key: 'testeur' },
     { label: 'Jobs', icon: ListChecks, href: '/admin/jobs', key: 'jobs' },

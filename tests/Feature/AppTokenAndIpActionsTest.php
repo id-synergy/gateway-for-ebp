@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\AllowedIp;
 use App\Models\AppToken;
 use App\Models\EbpAccount;
 use App\Models\EbpFolder;
+use App\Models\IpEntry;
 use App\Models\User;
+use App\Services\Apps\AppTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -48,7 +49,7 @@ class AppTokenAndIpActionsTest extends TestCase
     {
         $account = EbpAccount::factory()->create();
         $folder = EbpFolder::factory()->create(['ebp_account_id' => $account->id]);
-        $service = app(\App\Services\Apps\AppTokenService::class);
+        $service = app(AppTokenService::class);
         [$token, $ancienneCle] = $service->create('App', $account, $folder);
 
         $this->actingAs($this->admin())
@@ -65,7 +66,7 @@ class AppTokenAndIpActionsTest extends TestCase
     public function test_un_jeton_revoque_ne_peut_pas_etre_regenere(): void
     {
         $account = EbpAccount::factory()->create();
-        $service = app(\App\Services\Apps\AppTokenService::class);
+        $service = app(AppTokenService::class);
         [$token] = $service->create('App', $account);
         $hashRevoque = $token->fresh()->token_hash;
         $service->revoke($token);
@@ -84,11 +85,12 @@ class AppTokenAndIpActionsTest extends TestCase
     {
         $admin = $this->admin();
 
-        $this->actingAs($admin)->post('/admin/ip', ['ip' => '203.0.113.5', 'label' => 'Test'])->assertRedirect();
-        $this->assertDatabaseHas('allowed_ips', ['ip' => '203.0.113.5']);
+        // Ajout sans libellé -> supprimable intégralement.
+        $this->actingAs($admin)->post('/admin/ip', ['ip' => '203.0.113.5', 'status' => 'allowed'])->assertRedirect();
+        $this->assertDatabaseHas('ip_entries', ['ip' => '203.0.113.5', 'status' => 'allowed']);
 
-        $ip = AllowedIp::where('ip', '203.0.113.5')->first();
+        $ip = IpEntry::where('ip', '203.0.113.5')->first();
         $this->actingAs($admin)->delete("/admin/ip/{$ip->id}")->assertRedirect();
-        $this->assertDatabaseMissing('allowed_ips', ['ip' => '203.0.113.5']);
+        $this->assertDatabaseMissing('ip_entries', ['ip' => '203.0.113.5']);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\AllowedIp;
+use App\Models\IpEntry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
@@ -30,7 +30,7 @@ class RateLimitTest extends TestCase
 
     public function test_une_ip_autorisee_nest_pas_bridee(): void
     {
-        AllowedIp::create(['ip' => '127.0.0.1', 'label' => 'Tests']);
+        IpEntry::create(['ip' => '127.0.0.1', 'label' => 'Tests', 'status' => 'allowed']);
 
         for ($i = 0; $i < 10; $i++) {
             $this->getJson('/api/v1/ping')->assertOk();
