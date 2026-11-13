@@ -10,20 +10,43 @@ import {
 import GatewayLogo from '@/components/GatewayLogo.vue';
 import Toasts from '@/components/Toasts.vue';
 
-// Maquette statique : navigation en dur, pas de logique d'auth.
-const nav = [
-    { label: 'Tableau de bord', icon: LayoutDashboard, href: '/admin', key: 'dashboard' },
-    { label: 'Comptes EBP', icon: Plug, href: '/admin/comptes', key: 'comptes' },
-    { label: "Jetons d'apps", icon: KeyRound, href: '/admin/jetons', key: 'jetons' },
-    { label: 'Admins', icon: Users, href: '/admin/admins', key: 'admins' },
-    { label: 'Connexions', icon: LogIn, href: '/admin/connexions', key: 'connexions' },
-    { label: 'Audit', icon: History, href: '/admin/audit', key: 'audit' },
-    { label: 'IP', icon: Network, href: '/admin/ip', key: 'ip' },
-    { label: 'Logs', icon: ScrollText, href: '/admin/logs', key: 'logs' },
-    { label: 'Testeur EBP', icon: FlaskConical, href: '/admin/testeur', key: 'testeur' },
-    { label: 'Jobs', icon: ListChecks, href: '/admin/jobs', key: 'jobs' },
-    { label: 'Supervision', icon: Activity, href: '/admin/supervision', key: 'supervision' },
-    { label: 'API & doc', icon: BookOpen, href: '/admin/api', key: 'api' },
+// Navigation en dur, groupée par famille pour garder une sidebar cohérente :
+// pilotage (vue d'ensemble), configuration (ce qu'on administre), journaux
+// (ce qu'on consulte), outils. Les fiches « par personne » (détail admin,
+// détail compte) ne figurent pas ici : on y accède par clic depuis les listes.
+const navGroups = [
+    {
+        title: 'Pilotage',
+        items: [
+            { label: 'Tableau de bord', icon: LayoutDashboard, href: '/admin', key: 'dashboard' },
+            { label: 'Supervision', icon: Activity, href: '/admin/supervision', key: 'supervision' },
+        ],
+    },
+    {
+        title: 'Configuration',
+        items: [
+            { label: 'Comptes EBP', icon: Plug, href: '/admin/comptes', key: 'comptes' },
+            { label: "Jetons d'apps", icon: KeyRound, href: '/admin/jetons', key: 'jetons' },
+            { label: 'Admins', icon: Users, href: '/admin/admins', key: 'admins' },
+            { label: 'IP', icon: Network, href: '/admin/ip', key: 'ip' },
+        ],
+    },
+    {
+        title: 'Journaux',
+        items: [
+            { label: 'Connexions', icon: LogIn, href: '/admin/connexions', key: 'connexions' },
+            { label: 'Audit', icon: History, href: '/admin/audit', key: 'audit' },
+            { label: 'Logs', icon: ScrollText, href: '/admin/logs', key: 'logs' },
+            { label: 'Jobs', icon: ListChecks, href: '/admin/jobs', key: 'jobs' },
+        ],
+    },
+    {
+        title: 'Outils',
+        items: [
+            { label: 'Testeur EBP', icon: FlaskConical, href: '/admin/testeur', key: 'testeur' },
+            { label: 'API & doc', icon: BookOpen, href: '/admin/api', key: 'api' },
+        ],
+    },
 ];
 
 defineProps({ current: { type: String, default: '' } });
@@ -47,17 +70,22 @@ function logout() {
                     <div class="text-xs text-sidebar-foreground/60">EBP · passerelle</div>
                 </div>
             </div>
-            <nav class="flex-1 p-4 space-y-1.5">
-                <Link
-                    v-for="item in nav" :key="item.key" :href="item.href"
-                    class="flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] transition-colors"
-                    :class="current === item.key
-                        ? 'bg-primary text-primary-foreground font-medium'
-                        : 'text-sidebar-foreground/85 hover:bg-white/10 hover:text-white'"
-                >
-                    <component :is="item.icon" class="size-5" />
-                    {{ item.label }}
-                </Link>
+            <nav class="flex-1 p-4 space-y-4 overflow-y-auto">
+                <div v-for="group in navGroups" :key="group.title" class="space-y-1.5">
+                    <div class="px-4 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/40">
+                        {{ group.title }}
+                    </div>
+                    <Link
+                        v-for="item in group.items" :key="item.key" :href="item.href"
+                        class="flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] transition-colors"
+                        :class="current === item.key
+                            ? 'bg-primary text-primary-foreground font-medium'
+                            : 'text-sidebar-foreground/85 hover:bg-white/10 hover:text-white'"
+                    >
+                        <component :is="item.icon" class="size-5" />
+                        {{ item.label }}
+                    </Link>
+                </div>
             </nav>
             <div class="p-3 border-t border-sidebar-border flex items-center gap-1">
                 <Link href="/admin/profil" class="flex items-center gap-3 flex-1 min-w-0 rounded-xl hover:bg-white/10 px-3 py-2 transition-colors">
