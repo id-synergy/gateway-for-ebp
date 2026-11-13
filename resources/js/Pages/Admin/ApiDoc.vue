@@ -1,9 +1,12 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, KeyRound, Server, Copy, Check, Download } from 'lucide-vue-next';
+
+const { t } = useI18n();
 
 const props = defineProps({
     openapiUrl: { type: String, required: true },
@@ -67,7 +70,7 @@ onMounted(() => {
 
 <template>
     <AdminLayout current="api">
-        <template #title>API &amp; documentation</template>
+        <template #title>{{ t('apiDoc.title') }}</template>
 
         <!-- Onglets + téléchargements -->
         <div class="flex items-center gap-2 mb-4 flex-wrap">
@@ -76,14 +79,14 @@ onMounted(() => {
                 class="px-4 py-2 rounded-full text-sm font-medium transition-colors"
                 :class="tab === 'guide' ? 'bg-primary text-primary-foreground' : 'bg-white border border-[#E4DFCE] text-muted-foreground hover:text-[#002C52]'"
             >
-                <BookOpen class="size-4 inline -mt-0.5 mr-1" /> Guide
+                <BookOpen class="size-4 inline -mt-0.5 mr-1" /> {{ t('apiDoc.tabs.guide') }}
             </button>
             <button
                 type="button" @click="openSwagger"
                 class="px-4 py-2 rounded-full text-sm font-medium transition-colors"
                 :class="tab === 'swagger' ? 'bg-primary text-primary-foreground' : 'bg-white border border-[#E4DFCE] text-muted-foreground hover:text-[#002C52]'"
             >
-                <Server class="size-4 inline -mt-0.5 mr-1" /> Explorateur (Swagger)
+                <Server class="size-4 inline -mt-0.5 mr-1" /> {{ t('apiDoc.tabs.explorer') }}
             </button>
 
             <!-- Téléchargement des spécifications OpenAPI -->
@@ -91,16 +94,16 @@ onMounted(() => {
                 <a
                     href="/admin/api/download/gateway"
                     class="px-3 py-2 rounded-full text-sm font-medium bg-white border border-[#E4DFCE] text-[#002C52] hover:border-primary transition-colors inline-flex items-center gap-1.5"
-                    title="Swagger de la gateway (ping, whoami, jobs, batch, compose + modules relayés)"
+                    :title="t('apiDoc.download.gatewayTitle')"
                 >
-                    <Download class="size-4" /> Swagger gateway
+                    <Download class="size-4" /> {{ t('apiDoc.download.gateway') }}
                 </a>
                 <a
                     href="/admin/api/download/ebp"
                     class="px-3 py-2 rounded-full text-sm font-medium bg-white border border-[#E4DFCE] text-[#002C52] hover:border-primary transition-colors inline-flex items-center gap-1.5"
-                    title="Swagger de référence de l'API EBP (doc officielle consolidée)"
+                    :title="t('apiDoc.download.ebpTitle')"
                 >
-                    <Download class="size-4" /> Swagger EBP
+                    <Download class="size-4" /> {{ t('apiDoc.download.ebp') }}
                 </a>
             </div>
         </div>
@@ -110,30 +113,21 @@ onMounted(() => {
             <!-- Principe -->
             <CutCard>
                 <div class="p-5">
-                    <h3 class="text-base font-medium text-[#002C52] mb-2">Appeler la gateway, pas EBP directement</h3>
+                    <h3 class="text-base font-medium text-[#002C52] mb-2">{{ t('apiDoc.principle.title') }}</h3>
                     <p class="text-sm text-muted-foreground leading-relaxed">
-                        Les applications appellent la gateway. Elle centralise l'authentification EBP,
-                        la régulation du quota et la journalisation. Vous ne manipulez ni ClientId/Secret EBP,
-                        ni clé d'abonnement : la gateway résout le compte EBP et le dossier à partir de votre jeton d'app.
+                        {{ t('apiDoc.principle.p1') }}
                     </p>
-                    <p class="text-sm text-muted-foreground leading-relaxed mt-2">
-                        <strong class="text-[#002C52]">Proxy transparent</strong> : toute requête — <strong class="text-[#002C52]">GET comme écriture</strong>
-                        (POST, PUT, PATCH, DELETE) — dont le chemin commence par un préfixe EBP autorisé est relayée
-                        telle quelle vers EBP, au FolderId près. On ne réinvente aucun endpoint : on reste une passerelle.
-                    </p>
+                    <p class="text-sm text-muted-foreground leading-relaxed mt-2" v-html="t('apiDoc.principle.p2')" />
                     <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                        <span class="text-muted-foreground">Préfixes relayés :</span>
+                        <span class="text-muted-foreground">{{ t('apiDoc.principle.relayedPrefixes') }}</span>
                         <code v-for="p in proxyPrefixes" :key="p" class="px-2 py-0.5 rounded-md bg-[#F6F2E4] text-[#002C52] font-mono text-xs">{{ p }}</code>
-                        <span v-if="!proxyPrefixes.length" class="text-muted-foreground text-xs">aucun configuré</span>
+                        <span v-if="!proxyPrefixes.length" class="text-muted-foreground text-xs">{{ t('apiDoc.principle.noPrefix') }}</span>
                     </div>
-                    <p class="text-xs text-muted-foreground mt-2">
-                        Autres modules EBP (bâtiment, maintenance…) : ajoutez leur préfixe dans <code class="text-[11px]">EBP_PROXY_PREFIXES</code>.
-                        Cache des lectures contournable par <code class="text-[11px]">?noCache=1</code>.
-                    </p>
+                    <p class="text-xs text-muted-foreground mt-2" v-html="t('apiDoc.principle.otherModules')" />
                     <div class="mt-4 flex items-center gap-2 text-sm">
-                        <span class="text-muted-foreground">URL de base :</span>
+                        <span class="text-muted-foreground">{{ t('apiDoc.principle.baseUrl') }}</span>
                         <code class="px-2 py-1 rounded-lg bg-[#F6F2E4] text-[#002C52] font-mono text-xs">{{ baseUrl }}</code>
-                        <button type="button" @click="copyBase" class="text-muted-foreground hover:text-[#002C52]" aria-label="Copier l'URL de base">
+                        <button type="button" @click="copyBase" class="text-muted-foreground hover:text-[#002C52]" :aria-label="t('apiDoc.principle.copyBaseUrl')">
                             <Check v-if="copied" class="size-4 text-[#1D9E75]" />
                             <Copy v-else class="size-4" />
                         </button>
@@ -145,15 +139,11 @@ onMounted(() => {
             <CutCard>
                 <div class="p-5">
                     <h3 class="text-base font-medium text-[#002C52] mb-2 flex items-center gap-2">
-                        <KeyRound class="size-4" /> Authentification
+                        <KeyRound class="size-4" /> {{ t('apiDoc.auth.title') }}
                     </h3>
-                    <p class="text-sm text-muted-foreground leading-relaxed mb-3">
-                        Chaque requête (hors <code class="text-xs">/ping</code>) porte votre jeton d'app dans l'en-tête
-                        <code class="text-xs">Authorization</code>. Le jeton est créé dans
-                        <a href="/admin/jetons" class="text-primary hover:underline">Jetons d'apps</a> et affiché une seule fois.
-                    </p>
+                    <p class="text-sm text-muted-foreground leading-relaxed mb-3" v-html="t('apiDoc.auth.description')" />
                     <pre class="rounded-xl bg-[#002C52] text-[#E8EEF6] p-4 text-xs overflow-x-auto"><code>curl {{ baseUrl }}/gescom/api/v1/Clients \
-  -H "Authorization: Bearer gw_votre_jeton"</code></pre>
+  -H "Authorization: Bearer gw_your_token"</code></pre>
                 </div>
             </CutCard>
 
@@ -172,17 +162,13 @@ onMounted(() => {
                             </span>
                             <code class="font-mono text-[#002C52] text-[13px]">{{ ep.path }}</code>
                             <span class="text-muted-foreground text-xs ml-2 truncate">{{ ep.summary }}</span>
-                            <Badge v-if="!ep.auth" variant="outline" class="ml-auto shrink-0">public</Badge>
+                            <Badge v-if="!ep.auth" variant="outline" class="ml-auto shrink-0">{{ t('apiDoc.public') }}</Badge>
                         </div>
                     </div>
                 </div>
             </CutCard>
 
-            <p class="text-xs text-muted-foreground px-1">
-                Spécification complète (schémas, paramètres, réponses) :
-                <a :href="openapiUrl" target="_blank" class="text-primary hover:underline">openapi.yaml</a>
-                — ou l'onglet Explorateur pour la tester.
-            </p>
+            <p class="text-xs text-muted-foreground px-1" v-html="t('apiDoc.fullSpec', { url: openapiUrl })" />
         </div>
 
         <!-- SWAGGER -->
@@ -190,7 +176,7 @@ onMounted(() => {
             <CutCard>
                 <div class="p-2">
                     <div id="swagger-ui"></div>
-                    <p v-if="!swaggerLoaded" class="p-5 text-sm text-muted-foreground">Chargement de l'explorateur…</p>
+                    <p v-if="!swaggerLoaded" class="p-5 text-sm text-muted-foreground">{{ t('apiDoc.loadingExplorer') }}</p>
                 </div>
             </CutCard>
         </div>

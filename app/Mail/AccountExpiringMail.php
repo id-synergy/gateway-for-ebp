@@ -23,7 +23,7 @@ class AccountExpiringMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "[Gateway EBP] Compte {$this->account->label} bientôt déconnecté",
+            subject: "[Gateway EBP] Compte {$this->account->label} bientôt déconnecté — account about to disconnect",
         );
     }
 

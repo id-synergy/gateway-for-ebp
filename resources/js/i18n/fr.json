@@ -1,0 +1,624 @@
+{
+    "adminDetail": {
+        "alertPrefs": "Préférences d'alertes",
+        "alertPrefsHint": "Quelles alertes cet admin reçoit par mail. Cliquez pour modifier.",
+        "col": {
+            "action": "Action",
+            "browser": "Navigateur",
+            "details": "Détails",
+            "event": "Événement",
+            "resource": "Ressource",
+            "timestamp": "Horodatage"
+        },
+        "createdOn": "Créé le {date}",
+        "filteredNote": "Vue filtrée sur cet admin. Le journal global reste disponible dans",
+        "hide": "Masquer",
+        "lastAction": "Dernière action",
+        "lastLogin": "Dernière connexion",
+        "never": "Jamais",
+        "noActions": "Aucune action enregistrée pour cet admin.",
+        "noLogins": "Aucune connexion enregistrée pour cet admin.",
+        "recentActions": "Actions récentes",
+        "recentLogins": "Connexions récentes",
+        "recordedLogins": "Connexions enregistrées",
+        "view": "Voir"
+    },
+    "admins": {
+        "active": "Actif",
+        "add": "Ajouter un admin",
+        "alertType": "Type d'alerte",
+        "confirmRevokeInvite": "Révoquer cette invitation ? Le lien ne fonctionnera plus.",
+        "createAdmin": "Créer l'admin",
+        "deactivate": "Désactiver",
+        "defaultContact": "Contact par défaut pour les alertes",
+        "defaultContactBadge": "Contact par défaut",
+        "detail": "Détail",
+        "disabled": "Désactivé",
+        "expires": "Expire {when}",
+        "field": {
+            "email": "E-mail",
+            "name": "Nom",
+            "namePlaceholder": "Jean Dupont",
+            "password": "Mot de passe",
+            "passwordPlaceholder": "10 caractères min."
+        },
+        "invite": "Inviter",
+        "inviteHint": "La personne recevra un lien (valable 24 h) pour créer son compte en choisissant son mot de passe.",
+        "inviteTitle": "Inviter un administrateur",
+        "lastLogin": "Dernière connexion : {when}",
+        "neverLoggedIn": "Jamais connecté",
+        "notifPrefs": "Préférences de notification",
+        "notifPrefsHint": "Qui reçoit quelle alerte par mail. Cliquez pour modifier.",
+        "pendingInvites": "Invitations en attente",
+        "reactivate": "Réactiver",
+        "sendInvite": "Envoyer l'invitation",
+        "twoFaOff": "2FA désactivée"
+    },
+    "apiDoc": {
+        "auth": {
+            "description": "Chaque requête (hors <code class=\"text-xs\">/ping</code>) porte votre jeton d'app dans l'en-tête <code class=\"text-xs\">Authorization</code>. Le jeton est créé dans <a href=\"/admin/jetons\" class=\"text-primary hover:underline\">Jetons d'apps</a> et affiché une seule fois.",
+            "title": "Authentification"
+        },
+        "download": {
+            "ebp": "Swagger EBP",
+            "ebpTitle": "Swagger de référence de l'API EBP (doc officielle consolidée)",
+            "gateway": "Swagger gateway",
+            "gatewayTitle": "Swagger de la gateway (ping, whoami, jobs, batch, compose + modules relayés)"
+        },
+        "fullSpec": "Spécification complète (schémas, paramètres, réponses) : <a href=\"{url}\" target=\"_blank\" class=\"text-primary hover:underline\">openapi.yaml</a> — ou l'onglet Explorateur pour la tester.",
+        "loadingExplorer": "Chargement de l'explorateur…",
+        "principle": {
+            "baseUrl": "URL de base :",
+            "copyBaseUrl": "Copier l'URL de base",
+            "noPrefix": "aucun configuré",
+            "otherModules": "Autres modules EBP (bâtiment, maintenance…) : ajoutez leur préfixe dans <code class=\"text-[11px]\">EBP_PROXY_PREFIXES</code>. Cache des lectures contournable par <code class=\"text-[11px]\">?noCache=1</code>.",
+            "p1": "Les applications appellent la gateway. Elle centralise l'authentification EBP, la régulation du quota et la journalisation. Vous ne manipulez ni ClientId/Secret EBP, ni clé d'abonnement : la gateway résout le compte EBP et le dossier à partir de votre jeton d'app.",
+            "p2": "<strong class=\"text-[#002C52]\">Proxy transparent</strong> : toute requête — <strong class=\"text-[#002C52]\">GET comme écriture</strong> (POST, PUT, PATCH, DELETE) — dont le chemin commence par un préfixe EBP autorisé est relayée telle quelle vers EBP, au FolderId près. On ne réinvente aucun endpoint : on reste une passerelle.",
+            "relayedPrefixes": "Préfixes relayés :",
+            "title": "Appeler la gateway, pas EBP directement"
+        },
+        "public": "public",
+        "tabs": {
+            "explorer": "Explorateur (Swagger)",
+            "guide": "Guide"
+        },
+        "title": "API & documentation"
+    },
+    "audit": {
+        "allActions": "Toutes les actions",
+        "allAdmins": "Tous les admins",
+        "columns": {
+            "action": "Action",
+            "admin": "Admin",
+            "details": "Détails",
+            "ip": "IP",
+            "resource": "Ressource",
+            "timestamp": "Horodatage"
+        },
+        "empty": "Aucune action ne correspond.",
+        "footer": "{n} action(s)",
+        "hide": "Masquer",
+        "searchPlaceholder": "Rechercher une ressource ou une IP…",
+        "show": "Voir",
+        "title": "Journal d'actions"
+    },
+    "auth": {
+        "acceptInvitation": {
+            "heroSubtitle": "Définissez votre mot de passe pour accéder au back-office de la passerelle EBP.",
+            "heroTitle": "Bienvenue à bord.",
+            "linkNote": "Lien d'invitation personnel — valable 24 h.",
+            "password": "Mot de passe",
+            "passwordConfirm": "Confirmer le mot de passe",
+            "passwordHint": "Au moins 10 caractères.",
+            "submit": "Créer mon compte",
+            "subtitle": "Vous êtes invité·e en tant qu'administrateur.",
+            "title": "Créer mon compte",
+            "twoFactorHint": "Vous activerez la double authentification ensuite"
+        },
+        "invitationInvalid": {
+            "description": "Cette invitation a peut-être expiré (elle est valable 24 h) ou a déjà été utilisée. Demandez une nouvelle invitation à votre administrateur.",
+            "goToLogin": "Aller à la connexion",
+            "title": "Ce lien n'est plus valide"
+        },
+        "login": {
+            "adminsOnly": "Accès réservé aux administrateurs.",
+            "email": "Adresse e-mail",
+            "heroSubtitle": "La passerelle centralise l'accès à l'API EBP SaaS Gestion : authentification, quota, journalisation.",
+            "heroTitle": "Vos applications,<br>une seule porte vers EBP.",
+            "password": "Mot de passe",
+            "remember": "Se souvenir de moi",
+            "submit": "Se connecter",
+            "subtitle": "Accédez à l'espace d'administration.",
+            "title": "Connexion",
+            "twoFactorHint": "Double authentification si activée"
+        },
+        "points": {
+            "multiAccount": "Connexion OAuth EBP multi-comptes",
+            "perAppTokens": "Jetons d'accès par application",
+            "quotaLogging": "Régulation du quota et journalisation"
+        },
+        "twoFactor": {
+            "codeLabel": "Code à 6 chiffres",
+            "description": "Saisissez le code de votre application d'authentification",
+            "submit": "Valider",
+            "title": "Vérification en deux étapes"
+        }
+    },
+    "common": {
+        "actions": "Actions",
+        "add": "Ajouter",
+        "back": "Retour",
+        "cancel": "Annuler",
+        "close": "Fermer",
+        "confirm": "Confirmer",
+        "copied": "Copié",
+        "copy": "Copier",
+        "create": "Créer",
+        "date": "Date",
+        "delete": "Supprimer",
+        "edit": "Modifier",
+        "loading": "Chargement…",
+        "name": "Nom",
+        "no": "Non",
+        "none": "Aucun",
+        "save": "Enregistrer",
+        "search": "Rechercher",
+        "status": "Statut",
+        "yes": "Oui"
+    },
+    "components": {
+        "emptyState": {
+            "defaultTitle": "Rien pour l'instant"
+        }
+    },
+    "compteDetail": {
+        "accessTokenUntil": "Access token jusqu'à {time}",
+        "activityLog": "Journal d'activité",
+        "attachedTokens": "Jetons d'apps rattachés",
+        "clearCache": "Vider le cache",
+        "confirmDelete": "Supprimer le compte « {label} » ? Les jetons rattachés perdront leur accès.",
+        "edit": {
+            "activeKey": "Clé d'abonnement active",
+            "cacheOff": "Désactivé",
+            "cacheOn": "Activé",
+            "cacheTtl": "Durée du cache (secondes)",
+            "cacheTtlHint": "Vide = valeur par défaut. Le cache ne s'applique qu'à une requête identique (URL + paramètres).",
+            "cacheTtlPlaceholder": "Défaut (config)",
+            "clientIdUnchanged": "ClientId (vide = inchangé)",
+            "clientSecretUnchanged": "ClientSecret (vide = inchangé)",
+            "customRedirectPlaceholder": "https://… ou http://localhost:PORT/callback",
+            "customRedirectUri": "Redirect URI personnalisé",
+            "keyPrimary": "Primaire",
+            "keySecondary": "Secondaire",
+            "oauthRedirect": "Redirection OAuth (redirect_uri)",
+            "primaryKeyUnchanged": "Clé primaire (vide = inchangée)",
+            "readCache": "Cache des lectures",
+            "redirectCustom": "Autre / personnalisé (saisie manuelle du retour)",
+            "redirectCustomHint": "URL whitelistée chez EBP à saisir ci-dessous. Après autorisation, collez le retour via « Saisir le retour EBP ».",
+            "redirectGateway": "Passerelle (callback de la gateway)",
+            "redirectGatewayHint": "Le portail EBP renvoie sur le callback de la gateway. À utiliser une fois le domaine validé par EBP.",
+            "redirectLocalhost": "Localhost EBP (saisie manuelle du retour)",
+            "redirectLocalhostHintAfter": "Après autorisation, collez le retour via « Saisir le retour EBP ».",
+            "redirectLocalhostHintBefore": "Utilise le redirect_uri localhost whitelisté d'origine",
+            "redirectTokenNote": "Le renouvellement du token ne dépend pas de ce réglage.",
+            "secondaryKeyUnchanged": "Clé secondaire (vide = inchangée)",
+            "secretHint": "Laissez un secret vide pour le conserver inchangé.",
+            "title": "Modifier le compte"
+        },
+        "enterCallback": "Saisir le retour EBP",
+        "foldersEmpty": "Aucun dossier. Les dossiers sont découverts automatiquement depuis EBP à la connexion du compte ; cliquez sur « Synchroniser » une fois le compte connecté pour les récupérer.",
+        "lastRefreshError": "Dernière erreur de renouvellement",
+        "logEmpty": "Aucun événement pour l'instant. Les connexions, renouvellements de token, refus, synchronisations de dossiers et actions sur les jetons apparaîtront ici.",
+        "logStart": "Début du journal.",
+        "manual": {
+            "callbackPlaceholder": "http://localhost:3333/callback?code=…&state=…  ou  le code seul",
+            "introAfter": ") ne pointe pas sur la gateway.",
+            "introBefore": "Après avoir autorisé la connexion sur le portail EBP, collez ici l'URL complète de retour (la barre d'adresse, même si la page affiche une erreur) ou simplement le code. Utile quand le redirect_uri whitelisté (ex.",
+            "submit": "Valider le token",
+            "warnAfter": "que « Reconnecter ». S'il est expiré, relancez « Reconnecter ».",
+            "warnBefore": "Le code EBP expire en quelques instants et ne sert qu'une fois : collez le retour",
+            "warnMiddle": "après l'autorisation, de préférence depuis",
+            "warnPromptly": "aussitôt",
+            "warnSameBrowser": "le même navigateur"
+        },
+        "noTokenTargets": "Aucun jeton ne cible ce compte.",
+        "recordedCalls": "Appels enregistrés",
+        "refresh": "Actualiser",
+        "refreshExpires": "Refresh token expire",
+        "sync": "Synchroniser",
+        "tokenActive": "Actif",
+        "tokenRevoked": "Révoqué"
+    },
+    "comptes": {
+        "add": "Ajouter un compte EBP",
+        "empty": {
+            "text": "Après avoir créé le compte EBP en base (ClientId, ClientSecret, clé d'abonnement), connectez-le pour initier le flux OAuth.",
+            "title": "Aucun compte EBP connecté"
+        },
+        "env": {
+            "demo": "Démo (serveur simulé)",
+            "demoShort": "Démo",
+            "preproduction": "Préproduction",
+            "preproductionShort": "Préproduction",
+            "production": "Production"
+        },
+        "folders": "Dossiers",
+        "form": {
+            "backupRotation": "secours / rotation",
+            "devProfile": "profil développeur",
+            "environment": "Environnement EBP",
+            "fromEbpMail": "reçu par mail EBP",
+            "intro": "Saisissez les identifiants reçus d'EBP (ClientId/Secret par mail, clé d'abonnement depuis le profil développeur). Vous connecterez ensuite le compte via OAuth.",
+            "label": "Libellé",
+            "labelPlaceholder": "Société — prod",
+            "newTitle": "Nouveau compte EBP",
+            "primaryKey": "Clé d'abonnement primaire",
+            "secondaryKeyOptional": "Clé secondaire (optionnel)",
+            "submit": "Créer le compte"
+        },
+        "lastRefresh": "Dernier renouvellement",
+        "reconnect": "Reconnecter",
+        "refreshExpiry": "Expiration du refresh token",
+        "state": {
+            "broken": "Rompu",
+            "expiring": "Expire bientôt",
+            "healthy": "Sain"
+        },
+        "subscriptionKey": "Clé d'abonnement",
+        "title": "Comptes EBP",
+        "viewDetail": "Voir le détail"
+    },
+    "connexions": {
+        "allAdmins": "Tous les admins",
+        "allEvents": "Tous les événements",
+        "columns": {
+            "admin": "Admin",
+            "browser": "Navigateur",
+            "event": "Événement",
+            "ip": "IP",
+            "timestamp": "Horodatage"
+        },
+        "empty": "Aucune connexion ne correspond.",
+        "events": {
+            "failed": "Échec",
+            "login": "Connexion",
+            "logout": "Déconnexion",
+            "session_expired": "Session expirée",
+            "two_factor_failed": "2FA échouée",
+            "two_factor_passed": "2FA validée"
+        },
+        "footer": "{n} événement(s)",
+        "searchPlaceholder": "Rechercher une IP…",
+        "title": "Connexions"
+    },
+    "dashboard": {
+        "accountState": {
+            "broken": "Rompu",
+            "expiring": "Expire bientôt",
+            "healthy": "Sain"
+        },
+        "accountsState": {
+            "empty": "Aucun compte EBP connecté.",
+            "refreshToken": "Refresh token {when}",
+            "title": "État des comptes EBP"
+        },
+        "activity": {
+            "errorRate": "{rate}% d'erreurs (24 h)",
+            "title": "Activité des 7 derniers jours"
+        },
+        "cards": {
+            "accounts": "Comptes EBP connectés",
+            "calls24h": "Appels (24 h)",
+            "jobs": "Jobs en file",
+            "tokens": "Jetons d'apps actifs"
+        },
+        "recentCalls": {
+            "empty": "Aucun appel récent.",
+            "title": "Derniers appels"
+        },
+        "title": "Tableau de bord"
+    },
+    "ip": {
+        "addedBy": "Ajoutée par",
+        "address": "Adresse IP",
+        "allow": "Autoriser",
+        "allowedList": "IP autorisées",
+        "app": "App",
+        "block": "Bloquer",
+        "blockedList": "IP bloquées",
+        "calls": "Appels",
+        "classify": "Classer une adresse IP",
+        "confirmRemove": "Retirer cette IP ? Son libellé est conservé si elle en a un.",
+        "explain": "Autorisée : débit illimité (exemptée du rate-limit). Bloquée : rejetée en 403. Toute autre IP est fortement bridée (429 au dépassement). Les boucles locales ne sont jamais bloquées.",
+        "firstSeen": "Première vue",
+        "label": "Libellé",
+        "labelOptional": "Libellé (facultatif)",
+        "labelPlaceholder": "Nouveau site",
+        "lastSeen": "Dernière vue",
+        "nameTitle": "Nommer",
+        "noAllowed": "Aucune IP autorisée.",
+        "noBlocked": "Aucune IP bloquée.",
+        "noSeen": "Aucune IP dans les logs pour l'instant.",
+        "on": "Le",
+        "removeTitle": "Retirer",
+        "seen": "IP vues",
+        "seenHint": "Adresses observées dans les logs de requêtes. Nommez-les, autorisez-les ou bloquez-les d'un clic.",
+        "status": {
+            "allowed": "Autorisée",
+            "blocked": "Bloquée",
+            "neutral": "Non classée"
+        },
+        "unblockAllow": "Débloquer (autoriser)",
+        "unblockNeutral": "Débloquer (neutre)"
+    },
+    "jetons": {
+        "access": "Accès",
+        "accessOpen": "Ouvert",
+        "accessOpenTitle": "Accès à tout le périmètre EBP autorisé",
+        "accessRestricted": "Restreint ({count})",
+        "accessRulesTitle": "{count} règle(s) d'accès",
+        "activeTokens": "Jetons actifs",
+        "col": {
+            "application": "Application",
+            "defaultFolder": "Dossier par défaut",
+            "ebpAccess": "Accès EBP",
+            "lastUse": "Dernière utilisation"
+        },
+        "confirmRegenerate1": "Régénérer la clé du jeton « {name} » ?\n\nATTENTION : l'application qui utilise la clé actuelle ne pourra plus accéder à EBP tant qu'elle n'aura pas reçu la nouvelle clé.",
+        "confirmRegenerate2": "Êtes-vous sûr ? Cette action est IRRÉVERSIBLE.\n\nL'ancienne clé sera définitivement invalidée. La nouvelle clé ne sera affichée qu'une seule fois.",
+        "confirmRevoke": "Révoquer ce jeton ? Les apps qui l'utilisent perdront l'accès.",
+        "connect": "Connecter",
+        "copyManually": "Copiez le jeton manuellement :",
+        "create": "Créer un jeton",
+        "empty": {
+            "text": "Créez un jeton pour qu'une application (impression de tickets, pilotage…) puisse accéder à EBP via la gateway.",
+            "title": "Aucun jeton d'application"
+        },
+        "form": {
+            "appName": "Nom de l'application",
+            "appNamePlaceholder": "Logiciel tickets",
+            "defaultFolder": "Dossier par défaut (optionnel)",
+            "ebpAccount": "Compte EBP",
+            "folderHint": "Sinon l'app devra passer folderId à chaque appel.",
+            "folderPerRequest": "— à préciser dans chaque requête",
+            "submit": "Créer le jeton",
+            "title": "Nouveau jeton d'application"
+        },
+        "newToken": {
+            "copied": "Jeton copié dans le presse-papiers.",
+            "hintAfter": "sur la ligne du jeton : il génère un code d'appairage temporaire, sans jamais exposer le jeton dans le QR.",
+            "hintBefore": "Pour connecter une application par QR code, utilisez le bouton",
+            "label": "Nouveau jeton (copiez-le maintenant, il ne sera plus affiché) :"
+        },
+        "noActive": "Aucun jeton actif.",
+        "pairing": {
+            "adminPassword": "Mot de passe administrateur",
+            "expired": "Code expiré — fermez et recommencez.",
+            "expiresIn": "Expire dans",
+            "generationFailed": "Échec de la génération du code d'appairage.",
+            "passwordIntro": "Pour afficher le QR code d'appairage, confirmez votre mot de passe administrateur. Le QR transmet ce jeton sans le changer : vous pouvez connecter plusieurs appareils.",
+            "qrIntro": "Scannez ce code depuis l'application pour la connecter. Il contient un code d'appairage temporaire, pas le jeton : l'application récupère le jeton par la gateway, puis le code est invalidé.",
+            "regenerateNow": "Régénérer la clé maintenant",
+            "showQr": "Afficher le QR code",
+            "singleUse": "Usage unique : une fois scanné, ce code ne fonctionne plus. Un QR photographié après coup est inutile.",
+            "title": "Connecter « {name} »",
+            "wrongPassword": "Mot de passe incorrect."
+        },
+        "regenerateKey": "Régénérer la clé",
+        "revoke": "Révoquer",
+        "revokedTokens": "Jetons révoqués",
+        "rules": {
+            "addRule": "Ajouter une règle",
+            "allowedVerbs": "Verbes autorisés",
+            "openText": "L'application peut appeler tout le périmètre EBP autorisé par la gateway. Ajoutez des règles pour restreindre au moindre privilège.",
+            "openTitle": "Aucune règle : accès ouvert.",
+            "removeRule": "Supprimer la règle",
+            "restrictedText": "L'application ne peut appeler QUE les routes listées (les autres renvoient 403). Les fonctions de la gateway (/api/v1 : whoami, jobs, batch…) restent toujours accessibles.",
+            "restrictedTitle": "{count} règle(s) : accès restreint.",
+            "routePattern": "Motif de route",
+            "ruleN": "Règle {n}",
+            "save": "Enregistrer les règles",
+            "title": "Accès EBP de « {name} »",
+            "wildcardsBefore": "Jokers :",
+            "wildcardsFolder": "Le dossier (FolderId) est implicite : écrivez le chemin tel que l'app l'appelle.",
+            "wildcardsOne": "= un segment,",
+            "wildcardsRest": "= le reste du chemin."
+        },
+        "stateActive": "Actif",
+        "stateRevoked": "Révoqué"
+    },
+    "jobDetail": {
+        "failedSubjobs": "Sous-jobs en erreur",
+        "infos": {
+            "account": "Compte EBP",
+            "application": "Application",
+            "createdAt": "Créé le",
+            "finishedAt": "Terminé le",
+            "folder": "Dossier",
+            "type": "Type"
+        },
+        "noResult": "Pas encore de résultat (job en cours ou en attente).",
+        "progress": "Progression {done}/{total}",
+        "result": "Résultat"
+    },
+    "jobs": {
+        "columns": {
+            "application": "Application",
+            "description": "Description",
+            "jobId": "Job ID",
+            "progress": "Progression",
+            "type": "Type"
+        },
+        "empty": {
+            "text": "Les requêtes lourdes (lots, requêtes composites) basculées en file apparaîtront ici avec leur progression.",
+            "title": "Aucun job"
+        },
+        "status": {
+            "done": "Terminé",
+            "failed": "Échec",
+            "partial": "Partiel",
+            "pending": "En attente",
+            "running": "En cours"
+        },
+        "title": "Jobs"
+    },
+    "logDetail": {
+        "bodyUnavailable": "Corps non disponible (non enregistré, ou purgé après 360 jours).",
+        "bytes": "{n} octets",
+        "infos": {
+            "account": "Compte EBP",
+            "application": "Application",
+            "duration": "Durée",
+            "folder": "Dossier",
+            "sourceIp": "IP source",
+            "timestamp": "Horodatage"
+        },
+        "replay": "Rejouer dans le testeur",
+        "requestParams": "Paramètres de la requête",
+        "responseBody": "Corps de réponse EBP"
+    },
+    "logs": {
+        "allAccounts": "Tous les comptes",
+        "columns": {
+            "account": "Compte",
+            "application": "Application",
+            "duration": "Durée",
+            "ip": "IP",
+            "route": "Route",
+            "timestamp": "Horodatage"
+        },
+        "empty": "Aucun appel ne correspond.",
+        "filters": {
+            "all": "Tous",
+            "errors": "Erreurs",
+            "success": "Succès"
+        },
+        "footer": "{n} appel(s) · conservation 360 jours",
+        "searchPlaceholder": "Route, app, IP…",
+        "title": "Logs"
+    },
+    "nav": {
+        "admins": "Admins",
+        "api": "API & doc",
+        "audit": "Audit",
+        "comptes": "Comptes EBP",
+        "connexions": "Connexions",
+        "dashboard": "Tableau de bord",
+        "groups": {
+            "configuration": "Configuration",
+            "journaux": "Journaux",
+            "outils": "Outils",
+            "pilotage": "Pilotage"
+        },
+        "ip": "IP",
+        "jetons": "Jetons d'apps",
+        "jobs": "Jobs",
+        "logout": "Se déconnecter",
+        "logs": "Logs",
+        "supervision": "Supervision",
+        "testeur": "Testeur EBP",
+        "viewProfile": "Voir mon profil"
+    },
+    "profile": {
+        "errors": {
+            "generic": "Erreur {status}",
+            "invalidData": "Données invalides."
+        },
+        "identity": {
+            "email": "Adresse e-mail (identifiant de connexion)",
+            "name": "Nom",
+            "saved": "Identité mise à jour.",
+            "title": "Identité"
+        },
+        "password": {
+            "confirm": "Confirmer le nouveau mot de passe",
+            "current": "Mot de passe actuel",
+            "hint": "Au moins 10 caractères.",
+            "new": "Nouveau mot de passe",
+            "saved": "Mot de passe modifié.",
+            "submit": "Modifier le mot de passe",
+            "title": "Changer le mot de passe"
+        },
+        "title": "Mon profil",
+        "twoFactor": {
+            "addLayer": "Ajoutez une couche de sécurité avec une application d'authentification (Google Authenticator, Authy…).",
+            "codeLabel": "Code à 6 chiffres",
+            "disableButton": "Désactiver la 2FA",
+            "disableConfirm": "Désactiver la double authentification sur votre compte ?",
+            "disabled": "Désactivée",
+            "enableButton": "Activer la 2FA",
+            "enableError": "Impossible d'activer la 2FA.",
+            "enabled": "Activée",
+            "invalidCode": "Code invalide, réessayez.",
+            "protected": "Votre compte est protégé par un code à usage unique.",
+            "recoveryCodes": "Codes de récupération (à conserver) :",
+            "scanQr": "Scannez ce QR code, puis saisissez le code généré pour confirmer.",
+            "title": "Double authentification"
+        }
+    },
+    "supervision": {
+        "alerts": {
+            "emptyText": "Les alertes d'exploitation envoyées aux admins (échec de renouvellement, purge, compte expirant…) apparaîtront ici.",
+            "emptyTitle": "Aucune alerte envoyée",
+            "recipients": "Destinataires",
+            "sentAt": "Envoyée le",
+            "subject": "Objet",
+            "title": "Alertes envoyées",
+            "type": "Type"
+        },
+        "clearCache": "Vider tout le cache",
+        "clearCacheConfirm": "Vider tout le cache de lecture (tous les comptes) ?",
+        "openHorizon": "Ouvrir Horizon",
+        "queue": {
+            "done24h": "Jobs terminés (24 h)",
+            "failed24h": "Jobs en échec / partiels (24 h)",
+            "pending": "Jobs en file (en attente / en cours)"
+        },
+        "quota": {
+            "limit": "limite {perSecond} appel/s · {perDay}/jour",
+            "ofToday": "/ {perDay} aujourd'hui",
+            "title": "Quota EBP"
+        },
+        "title": "Supervision"
+    },
+    "testeur": {
+        "account": "Compte EBP",
+        "addParam": "Ajouter un paramètre",
+        "confirmWrite": {
+            "body": "Cette requête <strong class=\"text-[#002C52] font-mono\">{method}</strong> écrit dans la gestion commerciale réelle du compte sélectionné. L'opération peut être irréversible.",
+            "confirm": "Confirmer l'écriture",
+            "title": "Modifier des données réelles dans EBP ?"
+        },
+        "emptyBody": "Corps vide.",
+        "endpoint": "Endpoint EBP",
+        "endpointHint": "Chemin relatif, sans le host. Le slash de début est optionnel. Choisissez une suggestion ou saisissez librement.",
+        "errors": {
+            "enterEndpoint": "Renseignez l'endpoint EBP.",
+            "invalidRequest": "Requête invalide.",
+            "requestFailed": "Échec de la requête : {message}",
+            "selectAccount": "Sélectionnez un compte EBP.",
+            "serverError": "Erreur serveur (HTTP {status})."
+        },
+        "folder": "Dossier (optionnel)",
+        "folderNone": "— aucun",
+        "httpMethod": "Méthode HTTP",
+        "intro": "Émet une vraie requête authentifiée vers l'API EBP via la gateway et affiche la réponse brute. N'importe quel endpoint EBP est accepté (pas de liste blanche), mais l'appel reste borné au host du compte choisi. Chaque appel apparaît dans les <strong class=\"text-[#002C52]\">Logs</strong>.",
+        "jsonBody": "Corps JSON",
+        "jsonBodyHint": "JSON valide attendu pour {method}.",
+        "network": "réseau",
+        "queryKeyPlaceholder": "clé (ex. $top)",
+        "queryParams": "Paramètres de query",
+        "queryValuePlaceholder": "valeur",
+        "realWrite": "Écriture réelle",
+        "response": "Réponse",
+        "responseBody": "Corps de réponse EBP",
+        "send": "Envoyer la requête",
+        "sending": "Envoi…",
+        "suggestions": {
+            "catalog": "Catalogue EBP",
+            "history": "Déjà appelés",
+            "lastCall": "Dernier appel : {when}"
+        },
+        "title": "Testeur de requêtes EBP"
+    }
+}

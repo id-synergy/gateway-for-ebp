@@ -1,8 +1,11 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Badge } from '@/components/ui/badge';
 import { Plug, KeyRound, ListChecks, Activity } from 'lucide-vue-next';
+
+const { t } = useI18n();
 
 const props = defineProps({
     stats: { type: Object, default: () => ({ accounts: 0, tokens: 0, jobs: 0, calls24h: 0 }) },
@@ -14,19 +17,19 @@ const props = defineProps({
 
 // Alternance marine / blanc (1 sur 2), coin coupé alterné.
 const cards = computed(() => [
-    { label: 'Comptes EBP connectés', value: props.stats.accounts, icon: Plug, dark: false, corner: 'tl' },
-    { label: "Jetons d'apps actifs", value: props.stats.tokens, icon: KeyRound, dark: true, corner: 'tr' },
-    { label: 'Jobs en file', value: props.stats.jobs, icon: ListChecks, dark: false, corner: 'tl' },
-    { label: 'Appels (24 h)', value: props.stats.calls24h, icon: Activity, dark: true, corner: 'tr' },
+    { label: t('dashboard.cards.accounts'), value: props.stats.accounts, icon: Plug, dark: false, corner: 'tl' },
+    { label: t('dashboard.cards.tokens'), value: props.stats.tokens, icon: KeyRound, dark: true, corner: 'tr' },
+    { label: t('dashboard.cards.jobs'), value: props.stats.jobs, icon: ListChecks, dark: false, corner: 'tl' },
+    { label: t('dashboard.cards.calls24h'), value: props.stats.calls24h, icon: Activity, dark: true, corner: 'tr' },
 ]);
 
 const maxActivity = computed(() => Math.max(1, ...props.activity.map((a) => a.count)));
 
-const stateBadge = {
-    healthy: { text: 'Sain', variant: 'default' },
-    expiring: { text: 'Expire bientôt', variant: 'secondary' },
-    broken: { text: 'Rompu', variant: 'destructive' },
-};
+const stateBadge = computed(() => ({
+    healthy: { text: t('dashboard.accountState.healthy'), variant: 'default' },
+    expiring: { text: t('dashboard.accountState.expiring'), variant: 'secondary' },
+    broken: { text: t('dashboard.accountState.broken'), variant: 'destructive' },
+}));
 
 function statusColor(s) {
     if (s < 300) return '#1D9E75';
@@ -37,7 +40,7 @@ function statusColor(s) {
 
 <template>
     <AdminLayout current="dashboard">
-        <template #title>Tableau de bord</template>
+        <template #title>{{ t('dashboard.title') }}</template>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div
@@ -60,8 +63,8 @@ function statusColor(s) {
             <!-- Graphe d'activité -->
             <div class="lg:col-span-2 bg-white p-5" style="border:1px solid #E4DFCE; border-radius:1.5rem">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-medium text-[#002C52]">Activité des 7 derniers jours</h3>
-                    <span class="text-xs text-muted-foreground">{{ errorRate }}% d'erreurs (24 h)</span>
+                    <h3 class="text-base font-medium text-[#002C52]">{{ t('dashboard.activity.title') }}</h3>
+                    <span class="text-xs text-muted-foreground">{{ t('dashboard.activity.errorRate', { rate: errorRate }) }}</span>
                 </div>
                 <div class="flex items-end gap-2.5 h-36 border-b-2 border-[#E4DFCE]">
                     <div v-for="(a, i) in activity" :key="i" class="flex-1 flex flex-col items-center justify-end h-full group">
@@ -78,9 +81,9 @@ function statusColor(s) {
 
             <!-- Derniers appels -->
             <div class="bg-white p-5" style="border:1px solid #E4DFCE; border-radius:1.5rem">
-                <h3 class="text-base font-medium text-[#002C52] mb-4">Derniers appels</h3>
+                <h3 class="text-base font-medium text-[#002C52] mb-4">{{ t('dashboard.recentCalls.title') }}</h3>
                 <div class="space-y-3">
-                    <p v-if="!recentCalls.length" class="text-sm text-muted-foreground">Aucun appel récent.</p>
+                    <p v-if="!recentCalls.length" class="text-sm text-muted-foreground">{{ t('dashboard.recentCalls.empty') }}</p>
                     <div v-for="(c, i) in recentCalls" :key="i" class="flex items-center gap-2.5 text-sm">
                         <span class="size-2 rounded-full shrink-0" :style="{ background: statusColor(c.status) }"></span>
                         <span class="font-mono text-xs text-muted-foreground w-9 shrink-0">{{ c.at }}</span>
@@ -94,13 +97,13 @@ function statusColor(s) {
 
         <!-- État des comptes -->
         <div class="mt-4 bg-white p-5" style="border:1px solid #E4DFCE; border-radius:1.5rem">
-            <h3 class="text-base font-medium text-[#002C52] mb-4">État des comptes EBP</h3>
+            <h3 class="text-base font-medium text-[#002C52] mb-4">{{ t('dashboard.accountsState.title') }}</h3>
             <div class="space-y-3">
-                <p v-if="!accounts.length" class="text-sm text-muted-foreground">Aucun compte EBP connecté.</p>
+                <p v-if="!accounts.length" class="text-sm text-muted-foreground">{{ t('dashboard.accountsState.empty') }}</p>
                 <div v-for="a in accounts" :key="a.label" class="flex items-center justify-between border-b border-border last:border-0 pb-3 last:pb-0">
                     <div>
                         <div class="font-medium text-sm">{{ a.label }}</div>
-                        <div class="text-xs text-muted-foreground">Refresh token {{ a.expires }}</div>
+                        <div class="text-xs text-muted-foreground">{{ t('dashboard.accountsState.refreshToken', { when: a.expires }) }}</div>
                     </div>
                     <Badge :variant="(stateBadge[a.state] || stateBadge.broken).variant">{{ (stateBadge[a.state] || stateBadge.broken).text }}</Badge>
                 </div>

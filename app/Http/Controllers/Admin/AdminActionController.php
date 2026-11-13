@@ -56,14 +56,14 @@ class AdminActionController extends Controller
         $this->events->tokenRevoked($token->account, $token->name);
         $this->audit->log('token.revoked', $token, $token->name, ['account' => $token->account?->label]);
 
-        return back()->with('success', 'Jeton révoqué.');
+        return back()->with('success', __('messages.flash.token_revoked'));
     }
 
     public function regenerateToken(AppToken $token): RedirectResponse
     {
         // Une clé révoquée ne se régénère pas : la révocation est définitive, on recrée un jeton.
         if (! $token->is_active) {
-            return back()->with('error', 'Ce jeton est révoqué : créez-en un nouveau plutôt que de le régénérer.');
+            return back()->with('error', __('messages.flash.token_revoked_regenerate'));
         }
 
         $plain = $this->tokens->regenerate($token);
@@ -135,14 +135,14 @@ class AdminActionController extends Controller
         // On loge le nom et l'e-mail, JAMAIS le mot de passe.
         $this->audit->log('admin.created', $user, $user->name, ['email' => $user->email]);
 
-        return back()->with('success', 'Admin créé.');
+        return back()->with('success', __('messages.flash.admin_created'));
     }
 
     public function toggleAdmin(User $user): RedirectResponse
     {
         // On ne désactive pas le dernier admin actif.
         if ($user->is_active && User::where('is_active', true)->count() <= 1) {
-            return back()->with('error', 'Impossible de désactiver le dernier admin actif.');
+            return back()->with('error', __('messages.flash.cannot_deactivate_last_admin'));
         }
 
         $user->update(['is_active' => ! $user->is_active]);
@@ -154,7 +154,7 @@ class AdminActionController extends Controller
             ['email' => $user->email],
         );
 
-        return back()->with('success', $user->is_active ? 'Admin réactivé.' : 'Admin désactivé.');
+        return back()->with('success', __($user->is_active ? 'messages.flash.admin_reactivated' : 'messages.flash.admin_deactivated'));
     }
 
     public function togglePreference(Request $request): RedirectResponse
@@ -170,7 +170,7 @@ class AdminActionController extends Controller
             ['enabled' => $data['enabled']],
         );
 
-        return back()->with('success', 'Préférence enregistrée.');
+        return back()->with('success', __('messages.flash.preference_saved'));
     }
 
     public function storeAccount(Request $request): RedirectResponse
@@ -199,7 +199,7 @@ class AdminActionController extends Controller
         // On loge le label et l'environnement, JAMAIS les credentials (client_secret, clés d'abonnement).
         $this->audit->log('account.created', $account, $account->label, ['environment' => $account->environment]);
 
-        return back()->with('success', 'Compte EBP créé. Connectez-le pour initier le flux OAuth.');
+        return back()->with('success', __('messages.flash.account_created_connect'));
     }
 
     public function updateAccount(Request $request, EbpAccount $account): RedirectResponse
@@ -253,7 +253,7 @@ class AdminActionController extends Controller
         }
         $this->audit->log('account.updated', $account, $account->label, $props);
 
-        return back()->with('success', 'Compte EBP mis à jour.');
+        return back()->with('success', __('messages.flash.account_updated'));
     }
 
     public function destroyAccount(EbpAccount $account): RedirectResponse
@@ -265,22 +265,22 @@ class AdminActionController extends Controller
 
         $this->audit->log('account.deleted', null, $label, ['environment' => $environment]);
 
-        return to_route('admin.comptes.index')->with('success', 'Compte EBP supprimé.');
+        return to_route('admin.comptes.index')->with('success', __('messages.flash.account_deleted'));
     }
 
     public function syncFolders(EbpAccount $account, EbpFolderDiscovery $discovery): RedirectResponse
     {
         if ($account->status !== 'connected') {
-            return back()->with('error', "Connectez d'abord le compte à EBP avant de synchroniser les dossiers.");
+            return back()->with('error', __('messages.flash.connect_account_before_sync'));
         }
 
         try {
             $count = $discovery->sync($account);
             $this->audit->log('account.folders_synced', $account, $account->label, ['count' => $count]);
 
-            return back()->with('success', "{$count} dossier(s) synchronisé(s) depuis EBP.");
+            return back()->with('success', __('messages.flash.folders_synced', ['count' => $count]));
         } catch (\Throwable $e) {
-            return back()->with('error', 'Synchronisation échouée : '.$e->getMessage());
+            return back()->with('error', __('messages.flash.sync_failed', ['error' => $e->getMessage()]));
         }
     }
 
@@ -291,7 +291,7 @@ class AdminActionController extends Controller
         $this->events->cacheCleared($account);
         $this->audit->log('cache.cleared_account', $account, $account->label);
 
-        return back()->with('success', "Cache de lecture du compte « {$account->label} » vidé.");
+        return back()->with('success', __('messages.flash.cache_cleared_account', ['label' => $account->label]));
     }
 
     /** Vide tout le cache de lecture (tous les comptes). */
@@ -303,6 +303,6 @@ class AdminActionController extends Controller
         EbpAccount::each(fn (EbpAccount $account) => $this->events->cacheCleared($account, global: true));
         $this->audit->log('cache.cleared_all', null, 'Tout le cache de lecture');
 
-        return back()->with('success', 'Tout le cache de lecture a été vidé.');
+        return back()->with('success', __('messages.flash.cache_cleared_all'));
     }
 }

@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
@@ -19,6 +20,8 @@ const props = defineProps({
     invitations: { type: Array, default: () => [] },
 });
 
+const { t } = useI18n();
+
 const showForm = ref(false);
 const form = useForm({ name: '', email: '', password: '', is_default_contact: false });
 
@@ -32,7 +35,7 @@ function sendInvite() {
     inviteForm.post('/admin/invitations', { preserveScroll: true, onSuccess: () => { inviteForm.reset(); showInvite.value = false; } });
 }
 function revokeInvite(id) {
-    if (confirm('Révoquer cette invitation ? Le lien ne fonctionnera plus.')) {
+    if (confirm(t('admins.confirmRevokeInvite'))) {
         router.delete(`/admin/invitations/${id}`, { preserveScroll: true });
     }
 }
@@ -49,42 +52,42 @@ function initials(name) {
 
 <template>
     <AdminLayout current="admins">
-        <template #title>Admins</template>
+        <template #title>{{ t('nav.admins') }}</template>
         <template #actions>
             <div class="flex items-center gap-2">
-                <Button variant="outline" size="lg" @click="showInvite = !showInvite"><Send class="size-4" /> Inviter</Button>
-                <Button size="lg" @click="showForm = !showForm"><Plus class="size-5" /> Ajouter un admin</Button>
+                <Button variant="outline" size="lg" @click="showInvite = !showInvite"><Send class="size-4" /> {{ t('admins.invite') }}</Button>
+                <Button size="lg" @click="showForm = !showForm"><Plus class="size-5" /> {{ t('admins.add') }}</Button>
             </div>
         </template>
 
         <!-- Formulaire d'invitation -->
         <CutCard v-if="showInvite" class="mb-4">
             <div class="p-5 space-y-4">
-                <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2"><Send class="size-4" /> Inviter un administrateur</h3>
-                <p class="text-xs text-muted-foreground -mt-2">La personne recevra un lien (valable 24 h) pour créer son compte en choisissant son mot de passe.</p>
+                <h3 class="text-base font-medium text-[#002C52] flex items-center gap-2"><Send class="size-4" /> {{ t('admins.inviteTitle') }}</h3>
+                <p class="text-xs text-muted-foreground -mt-2">{{ t('admins.inviteHint') }}</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-2">
-                        <Label>Nom</Label>
-                        <Input v-model="inviteForm.name" placeholder="Jean Dupont" />
+                        <Label>{{ t('admins.field.name') }}</Label>
+                        <Input v-model="inviteForm.name" :placeholder="t('admins.field.namePlaceholder')" />
                         <p v-if="inviteForm.errors.name" class="text-xs text-destructive">{{ inviteForm.errors.name }}</p>
                     </div>
                     <div class="space-y-2">
-                        <Label>E-mail</Label>
+                        <Label>{{ t('admins.field.email') }}</Label>
                         <Input v-model="inviteForm.email" type="email" placeholder="jean@example.com" />
                         <p v-if="inviteForm.errors.email" class="text-xs text-destructive">{{ inviteForm.errors.email }}</p>
                     </div>
                 </div>
                 <label class="flex items-center gap-2 text-sm text-muted-foreground">
-                    <input v-model="inviteForm.is_default_contact" type="checkbox" class="gw-check"> Contact par défaut pour les alertes
+                    <input v-model="inviteForm.is_default_contact" type="checkbox" class="gw-check"> {{ t('admins.defaultContact') }}
                 </label>
-                <Button :disabled="inviteForm.processing" @click="sendInvite"><Send class="size-4" /> Envoyer l'invitation</Button>
+                <Button :disabled="inviteForm.processing" @click="sendInvite"><Send class="size-4" /> {{ t('admins.sendInvite') }}</Button>
             </div>
         </CutCard>
 
         <!-- Invitations en attente -->
         <CutCard v-if="invitations.length" class="mb-4">
             <div class="p-5">
-                <h3 class="text-base font-medium text-[#002C52] mb-3 flex items-center gap-2"><Clock class="size-4" /> Invitations en attente</h3>
+                <h3 class="text-base font-medium text-[#002C52] mb-3 flex items-center gap-2"><Clock class="size-4" /> {{ t('admins.pendingInvites') }}</h3>
                 <div class="space-y-1.5">
                     <div v-for="inv in invitations" :key="inv.id" class="flex items-center gap-2.5 text-sm rounded-xl bg-[#F6F2E4] px-3 py-2.5">
                         <span class="size-7 rounded-full bg-primary/10 text-primary grid place-items-center shrink-0"><Mail class="size-3.5" /></span>
@@ -92,8 +95,8 @@ function initials(name) {
                             <div class="font-medium text-[#002C52]">{{ inv.name }}</div>
                             <div class="text-xs text-muted-foreground">{{ inv.email }}</div>
                         </div>
-                        <Badge variant="outline" class="ml-auto">Expire {{ inv.expiresIn }}</Badge>
-                        <Button variant="ghost" size="icon" class="text-destructive" @click="revokeInvite(inv.id)" aria-label="Révoquer">
+                        <Badge variant="outline" class="ml-auto">{{ t('admins.expires', { when: inv.expiresIn }) }}</Badge>
+                        <Button variant="ghost" size="icon" class="text-destructive" @click="revokeInvite(inv.id)" :aria-label="t('jetons.revoke')">
                             <Trash2 class="size-4" />
                         </Button>
                     </div>
@@ -106,25 +109,25 @@ function initials(name) {
             <div class="p-5 space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="space-y-2">
-                        <Label>Nom</Label>
-                        <Input v-model="form.name" placeholder="Jean Dupont" />
+                        <Label>{{ t('admins.field.name') }}</Label>
+                        <Input v-model="form.name" :placeholder="t('admins.field.namePlaceholder')" />
                         <p v-if="form.errors.name" class="text-xs text-destructive">{{ form.errors.name }}</p>
                     </div>
                     <div class="space-y-2">
-                        <Label>E-mail</Label>
+                        <Label>{{ t('admins.field.email') }}</Label>
                         <Input v-model="form.email" type="email" placeholder="jean@example.com" />
                         <p v-if="form.errors.email" class="text-xs text-destructive">{{ form.errors.email }}</p>
                     </div>
                     <div class="space-y-2">
-                        <Label>Mot de passe</Label>
-                        <Input v-model="form.password" type="password" placeholder="10 caractères min." />
+                        <Label>{{ t('admins.field.password') }}</Label>
+                        <Input v-model="form.password" type="password" :placeholder="t('admins.field.passwordPlaceholder')" />
                         <p v-if="form.errors.password" class="text-xs text-destructive">{{ form.errors.password }}</p>
                     </div>
                 </div>
                 <label class="flex items-center gap-2 text-sm text-muted-foreground">
-                    <input v-model="form.is_default_contact" type="checkbox" class="gw-check"> Contact par défaut pour les alertes
+                    <input v-model="form.is_default_contact" type="checkbox" class="gw-check"> {{ t('admins.defaultContact') }}
                 </label>
-                <Button :disabled="form.processing" @click="submit">Créer l'admin</Button>
+                <Button :disabled="form.processing" @click="submit">{{ t('admins.createAdmin') }}</Button>
             </div>
         </CutCard>
 
@@ -141,21 +144,21 @@ function initials(name) {
                             <Mail class="size-3 shrink-0" /> {{ u.email }}
                         </div>
                         <div class="text-xs text-muted-foreground flex items-center gap-1 truncate mt-0.5">
-                            <Clock class="size-3 shrink-0" /> {{ u.lastLoginAt ? `Dernière connexion : ${u.lastLoginAt}` : 'Jamais connecté' }}
+                            <Clock class="size-3 shrink-0" /> {{ u.lastLoginAt ? t('admins.lastLogin', { when: u.lastLoginAt }) : t('admins.neverLoggedIn') }}
                         </div>
                         <div class="flex flex-wrap gap-1.5 mt-2.5">
                             <Badge v-if="u.twoFa" variant="default" class="gap-1"><ShieldCheck class="size-3" /> 2FA</Badge>
-                            <Badge v-else variant="secondary">2FA désactivée</Badge>
-                            <Badge v-if="u.defaultContact" variant="outline">Contact par défaut</Badge>
+                            <Badge v-else variant="secondary">{{ t('admins.twoFaOff') }}</Badge>
+                            <Badge v-if="u.defaultContact" variant="outline">{{ t('admins.defaultContactBadge') }}</Badge>
                             <Badge :variant="u.active ? 'default' : 'secondary'" :class="u.active ? 'bg-[#1D9E75] hover:bg-[#1D9E75]' : ''">
-                                {{ u.active ? 'Actif' : 'Désactivé' }}
+                                {{ u.active ? t('admins.active') : t('admins.disabled') }}
                             </Badge>
                         </div>
                     </div>
                     <div class="flex flex-col items-end gap-1.5 shrink-0">
-                        <Button variant="outline" size="sm" @click="toggle(u)">{{ u.active ? 'Désactiver' : 'Réactiver' }}</Button>
+                        <Button variant="outline" size="sm" @click="toggle(u)">{{ u.active ? t('admins.deactivate') : t('admins.reactivate') }}</Button>
                         <Link :href="`/admin/admins/${u.id}`" class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[#002C52]">
-                            Détail <ArrowRight class="size-3" />
+                            {{ t('admins.detail') }} <ArrowRight class="size-3" />
                         </Link>
                     </div>
                 </div>
@@ -165,12 +168,12 @@ function initials(name) {
         <!-- Matrice de préférences (éditable) -->
         <CutCard class="mt-4">
             <div class="p-5">
-                <h3 class="text-base font-medium text-[#002C52] mb-1">Préférences de notification</h3>
-                <p class="text-xs text-muted-foreground mb-4">Qui reçoit quelle alerte par mail. Cliquez pour modifier.</p>
+                <h3 class="text-base font-medium text-[#002C52] mb-1">{{ t('admins.notifPrefs') }}</h3>
+                <p class="text-xs text-muted-foreground mb-4">{{ t('admins.notifPrefsHint') }}</p>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Type d'alerte</TableHead>
+                            <TableHead>{{ t('admins.alertType') }}</TableHead>
                             <TableHead v-for="u in admins" :key="u.id" class="text-center">{{ u.name }}</TableHead>
                         </TableRow>
                     </TableHeader>

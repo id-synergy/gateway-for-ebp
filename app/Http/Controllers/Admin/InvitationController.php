@@ -31,7 +31,7 @@ class InvitationController extends Controller
         ]);
 
         if (User::where('email', $data['email'])->exists()) {
-            return back()->with('error', 'Un compte existe déjà avec cette adresse.');
+            return back()->with('error', __('messages.flash.account_already_exists'));
         }
 
         // Une seule invitation en attente par e-mail : on remplace la précédente.
@@ -55,7 +55,7 @@ class InvitationController extends Controller
         // On loge le destinataire, JAMAIS le token d'invitation.
         $this->audit->log('invitation.created', $invitation, $invitation->email, ['name' => $invitation->name]);
 
-        return back()->with('success', "Invitation envoyée à {$invitation->email}.");
+        return back()->with('success', __('messages.flash.invitation_sent', ['email' => $invitation->email]));
     }
 
     public function destroy(Invitation $invitation): RedirectResponse
@@ -65,6 +65,6 @@ class InvitationController extends Controller
 
         $this->audit->log('invitation.revoked', null, $email);
 
-        return back()->with('success', 'Invitation révoquée.');
+        return back()->with('success', __('messages.flash.invitation_revoked'));
     }
 }

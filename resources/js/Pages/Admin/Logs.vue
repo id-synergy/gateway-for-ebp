@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CutCard from '@/components/CutCard.vue';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,8 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Search } from 'lucide-vue-next';
+
+const { t } = useI18n();
 
 const props = defineProps({
     logs: { type: Object, default: () => ({ data: [], links: [] }) },
@@ -44,21 +47,21 @@ function open(id) {
 
 <template>
     <AdminLayout current="logs">
-        <template #title>Logs</template>
+        <template #title>{{ t('logs.title') }}</template>
 
         <CutCard class="mb-4">
             <div class="p-5 flex flex-wrap items-center gap-3">
                 <div class="relative flex-1 min-w-52">
                     <Search class="size-4 absolute left-3 top-3.5 text-muted-foreground" />
-                    <Input v-model="search" class="pl-9" placeholder="Route, app, IP…" />
+                    <Input v-model="search" class="pl-9" :placeholder="t('logs.searchPlaceholder')" />
                 </div>
                 <div class="flex gap-1.5">
-                    <Button :variant="status === '' ? 'default' : 'outline'" size="sm" @click="status = ''">Tous</Button>
-                    <Button :variant="status === 'success' ? 'default' : 'outline'" size="sm" @click="status = 'success'">Succès</Button>
-                    <Button :variant="status === 'error' ? 'default' : 'outline'" size="sm" @click="status = 'error'">Erreurs</Button>
+                    <Button :variant="status === '' ? 'default' : 'outline'" size="sm" @click="status = ''">{{ t('logs.filters.all') }}</Button>
+                    <Button :variant="status === 'success' ? 'default' : 'outline'" size="sm" @click="status = 'success'">{{ t('logs.filters.success') }}</Button>
+                    <Button :variant="status === 'error' ? 'default' : 'outline'" size="sm" @click="status = 'error'">{{ t('logs.filters.errors') }}</Button>
                 </div>
                 <select v-if="accountOptions.length" v-model="account" class="gw-select h-9 rounded-full border border-input bg-background px-4 text-sm">
-                    <option :value="null">Tous les comptes</option>
+                    <option :value="null">{{ t('logs.allAccounts') }}</option>
                     <option v-for="a in accountOptions" :key="a.id" :value="a.id">{{ a.label }}</option>
                 </select>
             </div>
@@ -69,17 +72,17 @@ function open(id) {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Horodatage</TableHead>
-                            <TableHead>Application</TableHead>
-                            <TableHead>Compte</TableHead>
-                            <TableHead>Route</TableHead>
-                            <TableHead>IP</TableHead>
-                            <TableHead class="text-right">Durée</TableHead>
-                            <TableHead class="text-right">Statut</TableHead>
+                            <TableHead>{{ t('logs.columns.timestamp') }}</TableHead>
+                            <TableHead>{{ t('logs.columns.application') }}</TableHead>
+                            <TableHead>{{ t('logs.columns.account') }}</TableHead>
+                            <TableHead>{{ t('logs.columns.route') }}</TableHead>
+                            <TableHead>{{ t('logs.columns.ip') }}</TableHead>
+                            <TableHead class="text-right">{{ t('logs.columns.duration') }}</TableHead>
+                            <TableHead class="text-right">{{ t('common.status') }}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow v-if="!logs.data.length"><TableCell colspan="7" class="text-muted-foreground text-center py-6">Aucun appel ne correspond.</TableCell></TableRow>
+                        <TableRow v-if="!logs.data.length"><TableCell colspan="7" class="text-muted-foreground text-center py-6">{{ t('logs.empty') }}</TableCell></TableRow>
                         <TableRow v-for="(l, idx) in logs.data" :key="idx" class="cursor-pointer hover:bg-muted/50" @click="open(l.id)">
                             <TableCell class="text-muted-foreground whitespace-nowrap">{{ l.at }}</TableCell>
                             <TableCell>{{ l.app }}</TableCell>
@@ -93,7 +96,7 @@ function open(id) {
                 </Table>
 
                 <div v-if="logs.links && logs.links.length > 3" class="flex items-center justify-between mt-4 pt-4 border-t border-border">
-                    <span class="text-xs text-muted-foreground">{{ logs.total }} appels · conservation 360 jours</span>
+                    <span class="text-xs text-muted-foreground">{{ t('logs.footer', { n: logs.total }) }}</span>
                     <div class="flex gap-1">
                         <Button v-for="(link, i) in logs.links" :key="i" size="sm"
                                 :variant="link.active ? 'default' : 'outline'"
@@ -101,7 +104,7 @@ function open(id) {
                                 @click="go(link.url)" v-html="link.label" />
                     </div>
                 </div>
-                <p v-else class="text-xs text-muted-foreground mt-4">{{ logs.total }} appel(s) · conservation 360 jours.</p>
+                <p v-else class="text-xs text-muted-foreground mt-4">{{ t('logs.footer', { n: logs.total }) }}</p>
             </div>
         </CutCard>
     </AdminLayout>
