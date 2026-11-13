@@ -243,8 +243,9 @@ return [
             | Instrument Sans (Bunny téléchargées au build, donc locales) sont tous
             | en 'self'. Vue + Inertia + shadcn-vue posent des styles inline sur les
             | éléments (positionnement de popovers/tooltips) : style-src a besoin de
-            | 'unsafe-inline'. script-src reste en 'self' strict (aucun script inline
-            | n'est injecté en prod — build Vite externe).
+            | 'unsafe-inline'. script-src reste strict (aucun script inline injecté
+            | en prod — build Vite externe), avec cdnjs autorisé pour Swagger-UI
+            | (CSS + bundle JS de l'explorateur, servis depuis le CDN).
             |
             | REPORT-ONLY : activable par env pour déployer la CSP sans rien bloquer
             | (le navigateur signale les violations sans les appliquer), le temps de
@@ -256,8 +257,8 @@ return [
                 "default-src 'self'",
                 "img-src 'self' data:",
                 "font-src 'self' data:",
-                "style-src 'self' 'unsafe-inline'",
-                "script-src 'self'",
+                "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+                "script-src 'self' https://cdnjs.cloudflare.com",
                 "connect-src 'self'",
                 "frame-ancestors 'none'",
                 "base-uri 'self'",
