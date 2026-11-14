@@ -7,9 +7,9 @@
 ![Horizon](https://img.shields.io/badge/Queue-Horizon%20(Redis)-DC382D?style=flat-square&logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Sail-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-6BA539?style=flat-square&logo=openapiinitiative&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-brightgreen?style=flat-square)
+![License](https://img.shields.io/badge/license-PolyForm_Noncommercial_1.0.0-blue?style=flat-square)
 
-**Une passerelle open source entre vos applications et l'[API Développeurs EBP](https://developpeurs.ebp.com) (SaaS Gestion)** — elle centralise l'authentification OAuth, la régulation du quota, la mise en file des requêtes lourdes et la journalisation, pour que vos apps parlent à EBP avec un **simple jeton**.
+**Une passerelle à source ouverte entre vos applications et l'[API Développeurs EBP](https://developpeurs.ebp.com) (SaaS Gestion)** — elle centralise l'authentification OAuth, la régulation du quota, la mise en file des requêtes lourdes et la journalisation, pour que vos apps parlent à EBP avec un **simple jeton**.
 
 > ⚠️ Ce projet est **indépendant**, non affilié à EBP et non officiel. « EBP » est une marque de son éditeur.
 
@@ -216,4 +216,8 @@ La suite couvre le proxy (7 modules), le cache, l'authentification OAuth, le jou
 
 ## 🧾 Licence
 
-[MIT](LICENSE).
+gateway-for-ebp est à source ouverte sous [licence PolyForm Noncommercial 1.0.0](LICENSE),
+copyright 2026 Dimitri Iachi. Tout usage **non commercial** — personnel, interne, modifications,
+contributions — est autorisé ; **tout usage commercial** (revente de la passerelle ou d'une œuvre
+dérivée, intégration dans une offre payante, ou exploitation d'une version concurrente) nécessite
+l'accord écrit préalable du titulaire — contact <https://id-synergy.tech/#contact>.
