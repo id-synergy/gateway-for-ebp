@@ -67,12 +67,14 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // L'API EBP a répondu une erreur : on la relaie en 502 Bad Gateway propre
         // (la gateway est un intermédiaire), sans exposer la trace. Le statut EBP d'origine
-        // est donné pour diagnostic ; 429 (quota EBP) est relayé tel quel.
+        // est donné pour diagnostic ; 429 (quota EBP) est relayé tel quel. On remonte aussi
+        // le(s) message(s) d'erreur d'EBP (hors StackTrace), pour que l'app puisse diagnostiquer.
         $exceptions->render(function (EbpApiException $e, Request $request) {
             return response()->json([
                 'error' => 'ebp_upstream_error',
                 'message' => "L'API EBP a renvoyé une erreur.",
                 'ebpStatus' => $e->status,
+                'ebpError' => \App\Support\EbpErrorFormatter::summarize($e->body),
             ], $e->isRateLimited() ? 429 : 502);
         });
 

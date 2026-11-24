@@ -9,6 +9,7 @@ use App\Models\EbpFolder;
 use App\Services\Ebp\EbpClient;
 use App\Services\Ebp\EbpPath;
 use App\Services\Ebp\GatewayCache;
+use App\Services\Ebp\MultipartBody;
 use App\Services\Ebp\WhereConditionTranslator;
 use App\Services\Jobs\GatewayJobService;
 use Illuminate\Http\JsonResponse;
@@ -58,6 +59,9 @@ class EbpProxyController extends Controller
         // pour que cache, journalisation et relai partagent le chemin réellement appelé.
         $endpoint = EbpPath::applyRewrites($this->withFolder($path, $prefix, $folder));
         $query = $this->translateWhereCondition($this->forwardableQuery($request));
+        // Modules « plats » qui attendent le FolderId en query (Import/Export) : on l'injecte si
+        // l'app ne l'a pas mis. Les modules « Folders » (gescom…) le portent déjà dans l'URL.
+        $query = $this->injectFolderInQuery($query, $prefix, $folder);
         $isRead = $method === 'GET';
 
         // 1. Cache (lecture seule, compte l'autorise, et non contourné).
@@ -86,10 +90,11 @@ class EbpProxyController extends Controller
         }
 
         // 3. Relai vers EBP (lecture ou écriture), via quota + logs.
-        // Le FolderId peut être injecté dans le corps pour les écritures qui l'attendent là
-        // (Import/Export) ; on ne l'ajoute pas quand le chemin porte déjà un dossier.
-        $body = $isRead ? null : $request->json()->all();
-        $body = $this->injectFolderInBody($body, $folder, str_contains($endpoint, '/Folders/'));
+        // Le corps est reconstruit selon le type réellement reçu : multipart (upload de fichier,
+        // ex. Import/CreateImport) relayé en multipart, sinon corps JSON. Le FolderId peut être
+        // injecté dans le corps pour les écritures qui l'attendent là (Import/Export) ; on ne
+        // l'ajoute pas quand le chemin porte déjà un dossier.
+        $body = $isRead ? null : $this->outgoingBody($request, $folder, str_contains($endpoint, '/Folders/'));
         $result = $this->client->send($account, $folder, $method, $endpoint, $query, $body);
 
         $payload = [
@@ -109,6 +114,32 @@ class EbpProxyController extends Controller
         }
 
         return response()->json($payload, $result['status'] ?? HttpResponse::HTTP_OK);
+    }
+
+    /**
+     * Construit le corps à relayer à EBP pour une écriture, selon le type reçu de l'app.
+     *
+     * - multipart/form-data (au moins un fichier) -> {@see MultipartBody} : fichiers + champs texte,
+     *   relayés en multipart (cas Import/CreateImport, qu'EBP refuse en application/json).
+     * - sinon -> corps JSON (array) comme avant.
+     *
+     * Dans les deux cas, le FolderId est injecté quand l'endpoint l'attend dans le corps.
+     */
+    protected function outgoingBody(Request $request, ?EbpFolder $folder, bool $folderInPath): mixed
+    {
+        if ($request->allFiles() !== []) {
+            $multipart = new MultipartBody(
+                files: $request->allFiles(),
+                // post() = champs du corps (form-urlencoded / multipart), hors fichiers et hors query.
+                fields: $request->post(),
+            );
+
+            return $this->injectFolderInBody($multipart, $folder, $folderInPath);
+        }
+
+        $body = $request->json()->all();
+
+        return $this->injectFolderInBody($body, $folder, $folderInPath);
     }
 
     /**
@@ -151,28 +182,49 @@ class EbpProxyController extends Controller
      */
     protected function injectFolderInBody(mixed $body, ?EbpFolder $folder, bool $folderInPath): mixed
     {
-        if (! $folder || ! is_array($body) || array_is_list($body)) {
+        if (! $folder) {
             return $body;
         }
 
-        // Si l'app a déjà mis folderId/FolderId : on respecte sa valeur, on ne complète que si vide.
+        // Multipart : on complète les champs texte (pas les fichiers), même règle que pour le JSON.
+        if ($body instanceof MultipartBody) {
+            $body->fields = $this->withFolderId($body->fields, $folder, $folderInPath);
+
+            return $body;
+        }
+
+        if (! is_array($body) || array_is_list($body)) {
+            return $body;
+        }
+
+        return $this->withFolderId($body, $folder, $folderInPath);
+    }
+
+    /**
+     * Complète un tableau de champs avec le FolderId attendu par EBP :
+     * respecte une valeur fournie par l'app (ne remplace que si vide) et n'ajoute la clé
+     * absente que si le dossier n'est pas déjà porté par l'URL (cas Import/Export).
+     *
+     * @param  array<string,mixed>  $fields
+     * @return array<string,mixed>
+     */
+    protected function withFolderId(array $fields, EbpFolder $folder, bool $folderInPath): array
+    {
         foreach (['folderId', 'FolderId'] as $key) {
-            if (array_key_exists($key, $body)) {
-                if (blank($body[$key])) {
-                    $body[$key] = $folder->folder_id;
+            if (array_key_exists($key, $fields)) {
+                if (blank($fields[$key])) {
+                    $fields[$key] = $folder->folder_id;
                 }
 
-                return $body;
+                return $fields;
             }
         }
 
-        // Clé absente : on ne l'ajoute que si le dossier n'est pas déjà dans l'URL
-        // (cas Import/Export, qui attendent folderId dans le corps). Casse attendue par EBP.
         if (! $folderInPath) {
-            $body['folderId'] = $folder->folder_id;
+            $fields['folderId'] = $folder->folder_id;
         }
 
-        return $body;
+        return $fields;
     }
 
     /**
@@ -188,10 +240,42 @@ class EbpProxyController extends Controller
         return $folder->folder_id;
     }
 
-    /** Query string à relayer, sans les paramètres de contrôle de la gateway. */
+    /**
+     * Query string à relayer, sans les paramètres de contrôle de la gateway.
+     *
+     * On part de la SEULE query string ($request->query()), jamais du corps : sinon, sur une
+     * requête multipart, les champs POST et surtout les UploadedFile se retrouveraient dans la
+     * query (et dans les logs, où ils cassent l'encodage JSON). Le corps est géré à part.
+     */
     protected function forwardableQuery(Request $request): array
     {
-        return $request->except(['folderId', 'noCache']);
+        return collect($request->query())->except(['folderId', 'noCache'])->all();
+    }
+
+    /**
+     * Injecte le FolderId dans la query string pour les modules « plats » qui l'attendent là
+     * (Import/Export), quand l'app ne l'a pas fourni. Les modules « Folders » portent le dossier
+     * dans l'URL : on ne touche alors pas à la query. Une valeur fournie par l'app est respectée.
+     *
+     * @param  array<string,mixed>  $query
+     * @return array<string,mixed>
+     */
+    protected function injectFolderInQuery(array $query, string $prefix, ?EbpFolder $folder): array
+    {
+        if (! $folder || EbpPath::usesFolderUrl($prefix)) {
+            return $query;
+        }
+
+        foreach (['FolderId', 'folderId'] as $key) {
+            if (array_key_exists($key, $query) && filled($query[$key])) {
+                return $query;
+            }
+        }
+
+        // Casse attendue par l'API Import/Export d'EBP sur ses paramètres de query.
+        $query['FolderId'] = $folder->folder_id;
+
+        return $query;
     }
 
     /**

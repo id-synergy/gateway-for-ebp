@@ -166,4 +166,74 @@ class ProxyRelayPerModuleTest extends TestCase
 
         Http::assertSent(fn ($r) => ($r->data()['folderId'] ?? null) === '9999');
     }
+
+    public function test_le_folderid_est_injecte_en_query_pour_les_modules_plats(): void
+    {
+        // Import/Export attendent le FolderId en query : la gateway doit l'ajouter quand l'app
+        // ne l'a pas mis (cas L3/L4 du rapport : 400 côté EBP faute de FolderId).
+        Http::fake(['*' => Http::response(['data' => []], 200)]);
+
+        $this->getJson('/import/api/v1/ModelSettings', $this->auth())->assertOk();
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'FolderId=3691'));
+    }
+
+    public function test_createimport_est_relaye_en_multipart_avec_le_fichier(): void
+    {
+        // Bug principal du rapport : un upload (multipart) était envoyé à EBP en application/json,
+        // fichier perdu, d'où « Incorrect Content-Type: application/json » (500). La gateway doit
+        // relayer un VRAI multipart, fichier compris.
+        Http::fake(['*/import/api/v1/CreateImport*' => Http::response(['importId' => 'IMP1'], 202)]);
+
+        $csv = "référence;EAN13\n150/40/SB;1234567891012\n";
+        $file = \Illuminate\Http\Testing\File::createWithContent('import-ean.csv', $csv);
+
+        $this->post(
+            '/import/api/v1/CreateImport?ImportCategory=Items&ImportSettings=article%20SR',
+            ['file' => $file],
+            $this->auth(),
+        )->assertStatus(202);
+
+        Http::assertSent(function ($r) {
+            $contentType = $r->header('Content-Type')[0] ?? '';
+            $raw = (string) $r->body();
+            $url = urldecode($r->url());
+
+            return str_contains($r->url(), '/import/api/v1/CreateImport')
+                && str_contains($contentType, 'multipart/form-data')   // plus de application/json
+                && str_contains($raw, 'name="file"')                   // le fichier est bien présent
+                && str_contains($raw, 'filename="import-ean.csv"')
+                && str_contains($raw, '150/40/SB')                     // contenu du fichier relayé
+                // Les paramètres ImportCategory/ImportSettings restent en query (attendu par EBP).
+                && str_contains($url, 'ImportCategory=Items')
+                && str_contains($url, 'ImportSettings=article SR');
+        });
+    }
+
+    public function test_le_message_d_erreur_ebp_est_remonte_a_l_app(): void
+    {
+        // Avant : seul ebpStatus était renvoyé. Maintenant on remonte aussi le message d'EBP
+        // (hors StackTrace), pour que l'app puisse diagnostiquer.
+        $ebpError = json_encode([
+            'title' => 'EBP_IMPORT_INTERNAL_SERVER_ERROR_TITLE',
+            'errorType' => 'ERROR_MIDDLEWARE',
+            'errors' => [
+                ['errorCode' => 'ERROR', 'errorMessage' => 'Incorrect Content-Type: application/json'],
+                ['errorCode' => 'StackTrace', 'errorMessage' => '   at Secret.Internal.Path()'],
+            ],
+        ]);
+        Http::fake(['*/import/api/v1/CreateImport*' => Http::response($ebpError, 500)]);
+
+        $file = \Illuminate\Http\Testing\File::createWithContent('x.csv', "a;b\n1;2\n");
+        $response = $this->post(
+            '/import/api/v1/CreateImport?ImportCategory=Items&ImportSettings=article%20SR',
+            ['file' => $file],
+            $this->auth(),
+        )->assertStatus(502);
+
+        $response->assertJsonPath('ebpStatus', 500);
+        $response->assertJsonPath('ebpError', 'Incorrect Content-Type: application/json');
+        // La trace interne d'EBP ne doit jamais fuiter vers l'app.
+        $this->assertStringNotContainsString('Secret.Internal.Path', $response->getContent());
+    }
 }
