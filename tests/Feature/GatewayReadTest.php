@@ -101,6 +101,23 @@ class GatewayReadTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_statut_result_import_n_est_jamais_cache(): void
+    {
+        // StatutResultImport évolue côté EBP (Waiting → Completed) sans écriture de notre part :
+        // le cacher figerait le statut. Deux lectures identiques doivent refrapper EBP.
+        config(['ebp.gateway.cache.default_ttl' => 60]);
+        Http::fake(['*/import/api/v1/StatutResultImport*' => Http::response(['status' => 'Waiting'])]);
+
+        $this->getJson('/import/api/v1/StatutResultImport?importId=IMP1', $this->auth())
+            ->assertOk()
+            ->assertJsonMissingPath('cached');
+        $this->getJson('/import/api/v1/StatutResultImport?importId=IMP1', $this->auth())
+            ->assertOk()
+            ->assertJsonMissingPath('cached');
+
+        Http::assertSentCount(2);
+    }
+
     public function test_une_ecriture_est_relayee_vers_ebp(): void
     {
         Http::fake(['*/Folders/3691/Documents/SaleDocument*' => Http::response(['id' => 'DOC1'], 201)]);

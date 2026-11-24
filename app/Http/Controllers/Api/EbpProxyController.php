@@ -66,7 +66,7 @@ class EbpProxyController extends Controller
 
         // 1. Cache (lecture seule, compte l'autorise, et non contourné).
         $ttl = ($isRead && $account->cacheEnabled()) ? $account->cacheTtl() : 0;
-        $bypass = $this->cacheBypassed($request);
+        $bypass = $this->cacheBypassed($request, $endpoint);
         $cacheKey = $this->cache->key($account, $folder, $endpoint, $query);
 
         if ($ttl > 0 && ! $bypass) {
@@ -295,9 +295,24 @@ class EbpProxyController extends Controller
         return $query;
     }
 
-    /** Cache contourné par ?noCache=1 ou l'en-tête Cache-Control: no-cache. */
-    protected function cacheBypassed(Request $request): bool
+    /**
+     * Endpoints de lecture dont la réponse évolue côté EBP sans écriture de notre part
+     * (donc sans invalidation de cache possible) : jamais mis en cache, quel que soit le TTL.
+     *
+     * StatutResultImport passe de Waiting → Starting → Completed tout seul : le cacher
+     * figerait le statut jusqu'à expiration du TTL et masquerait les transitions.
+     */
+    protected const NEVER_CACHED = ['StatutResultImport'];
+
+    /** Cache contourné par ?noCache=1, l'en-tête Cache-Control: no-cache, ou un endpoint « toujours frais ». */
+    protected function cacheBypassed(Request $request, string $endpoint): bool
     {
+        foreach (self::NEVER_CACHED as $segment) {
+            if (stripos($endpoint, $segment) !== false) {
+                return true;
+            }
+        }
+
         return $request->boolean('noCache')
             || str_contains(strtolower($request->header('Cache-Control', '')), 'no-cache');
     }
