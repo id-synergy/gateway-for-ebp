@@ -7,6 +7,7 @@ use App\Models\EbpAccount;
 use App\Models\EbpFolder;
 use App\Services\Logging\RequestLogger;
 use Illuminate\Http\Client\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -113,6 +114,18 @@ class EbpClient
                     'Accept-Language' => 'fr-FR',
                 ]);
 
+                // Upload de fichier : multipart/form-data (EBP refuse application/json sur CreateImport).
+                if ($body instanceof MultipartBody) {
+                    $parts = $this->multipartParts($body);
+                    $pending = $pending->asMultipart()->withQueryParameters($query);
+
+                    return match ($method) {
+                        'PUT' => $pending->put($url, $parts),
+                        'PATCH' => $pending->patch($url, $parts),
+                        default => $pending->post($url, $parts),
+                    };
+                }
+
                 // Écritures : corps JSON. Lectures : paramètres en query string.
                 return match ($method) {
                     'GET' => $pending->get($url, $query),
@@ -137,6 +150,42 @@ class EbpClient
 
             return $response;
         }
+    }
+
+    /**
+     * Construit la structure Guzzle `multipart` complète (fichiers + champs), pour que les
+     * champs texte accompagnent les fichiers dans la MÊME requête multipart.
+     *
+     * Chaque fichier est relayé avec son contenu binaire, son nom d'origine et son type MIME,
+     * sous le même nom de champ que celui reçu de l'app (ex. `file`). Les champs texte
+     * (FolderId, ImportCategory, ImportSettings…) sont ajoutés tels quels.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function multipartParts(MultipartBody $body): array
+    {
+        $parts = [];
+
+        foreach ($body->files as $name => $files) {
+            foreach (is_array($files) ? $files : [$files] as $file) {
+                /** @var UploadedFile $file */
+                $parts[] = [
+                    'name' => $name,
+                    'contents' => (string) file_get_contents($file->getRealPath()),
+                    'filename' => $file->getClientOriginalName(),
+                    'headers' => ['Content-Type' => $file->getClientMimeType() ?: 'application/octet-stream'],
+                ];
+            }
+        }
+
+        foreach ($body->fields as $name => $value) {
+            if (is_array($value)) {
+                continue; // champs scalaires uniquement côté EBP
+            }
+            $parts[] = ['name' => (string) $name, 'contents' => (string) $value];
+        }
+
+        return $parts;
     }
 
     /**
@@ -186,7 +235,10 @@ class EbpClient
         // Écritures : on renvoie une création/acceptation simulée, en écho du corps reçu.
         if ($method !== 'GET') {
             $status = $method === 'POST' ? 201 : 200;
-            $payload = ['id' => 'DEMO_'.strtoupper(bin2hex(random_bytes(3))), 'echo' => $body];
+            $echo = $body instanceof MultipartBody
+                ? ['multipart' => true, 'files' => array_keys($body->files), 'fields' => $body->fields]
+                : $body;
+            $payload = ['id' => 'DEMO_'.strtoupper(bin2hex(random_bytes(3))), 'echo' => $echo];
 
             return $this->jsonResponse($status, $payload);
         }

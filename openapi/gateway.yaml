@@ -17340,12 +17340,6 @@ paths:
         description: Catégorie liée à l'import - Se reporter à la documentation en ligne.
         schema:
           type: string
-      - name: contentXml
-        in: query
-        required: true
-        description: Modèle au format xml
-        schema:
-          type: string
       responses:
         '200':
           description: Succès
@@ -17358,19 +17352,30 @@ paths:
         '503':
           $ref: '#/components/responses/EbpAccountUnauthenticated'
       requestBody:
+        required: true
+        description: >-
+          Le modèle d'import. `contentXml` DOIT être envoyé dans le corps JSON (et non en
+          paramètre d'URL) : le XML fait plusieurs dizaines de Ko et dépasse la longueur
+          d'URL admise (sinon 414 Request URL Too Long).
         content:
           application/json:
             schema:
               type: object
+              required:
+              - importSettings
+              - importCategory
+              - contentXml
               properties:
                 folderId:
                   type: string
+                  description: Optionnel ; complété par la gateway depuis le jeton si absent.
                 importSettings:
                   type: string
                 importCategory:
                   type: string
                 contentXml:
                   type: string
+                  description: Modèle au format XML (base64 ou XML clair selon la doc EBP).
             example:
               folderId: string
               importSettings: string
@@ -18017,6 +18022,12 @@ components:
         ebpStatus:
           type: integer
           description: Statut HTTP EBP d'origine, si applicable
+        ebpError:
+          type: string
+          nullable: true
+          description: >-
+            Message(s) d'erreur renvoyé(s) par EBP (hors trace interne), pour diagnostic.
+            Null si EBP n'a pas fourni de message exploitable.
   responses:
     DataList:
       description: Liste de données
